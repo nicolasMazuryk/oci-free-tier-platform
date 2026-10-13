@@ -9,7 +9,7 @@ ok()  { printf '  \033[32mOK\033[0m   %s\n' "$*"; }
 bad() { printf '  \033[31mFAIL\033[0m %s\n' "$*"; fail=1; }
 comps="$(oci iam compartment list --compartment-id "$tenancy" --compartment-id-in-subtree true --all \
   --lifecycle-state ACTIVE --query 'data[].id' | jq -r '.[]'; echo "$tenancy")"
-each() { for c in $comps; do "$@" --compartment-id "$c" --all 2>/dev/null | jq -c '.data[]?' ; done; }
+each() { for c in $comps; do "$@" --compartment-id "$c" --all 2>/dev/null | jq -c '(.data | if type=="object" then (.items // []) else (. // []) end)[]' ; done; }
 
 echo "== compute"
 inst="$(each oci compute instance list | jq -s '[.[]|select(."lifecycle-state"!="TERMINATED")]')"

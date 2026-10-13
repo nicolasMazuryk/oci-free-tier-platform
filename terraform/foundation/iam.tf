@@ -34,6 +34,8 @@ resource "oci_identity_policy" "compute" {
     "Allow dynamic-group ${oci_identity_dynamic_group.compute.name} to use metrics in compartment ${oci_identity_compartment.core.name}",
     "Allow dynamic-group ${oci_identity_dynamic_group.compute.name} to use ons-topics in compartment ${oci_identity_compartment.core.name}",
     "Allow dynamic-group ${oci_identity_dynamic_group.compute.name} to read virtual-network-family in compartment ${oci_identity_compartment.core.name}",
+    # list NSG security rules (CF drift check) needs the "use" verb
+    "Allow dynamic-group ${oci_identity_dynamic_group.compute.name} to use network-security-groups in compartment ${oci_identity_compartment.core.name}",
     "Allow dynamic-group ${oci_identity_dynamic_group.compute.name} to use log-content in compartment ${oci_identity_compartment.core.name}",
     "Allow dynamic-group ${oci_identity_dynamic_group.compute.name} to read instances in compartment ${oci_identity_compartment.core.name}",
     "Allow dynamic-group ${oci_identity_dynamic_group.compute.name} to manage object-family in compartment ${oci_identity_compartment.projects.name}",

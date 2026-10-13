@@ -22,3 +22,4 @@ output "apm_domain_id" { value = oci_apm_apm_domain.core.id }
 output "apm_data_upload_endpoint" { value = oci_apm_apm_domain.core.data_upload_endpoint }
 output "smtp_secret_id" { value = oci_vault_secret.smtp.id }
 output "alerts_email" { value = var.alerts_email }
+output "dynamic_group_id" { value = oci_identity_dynamic_group.compute.id }

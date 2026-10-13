@@ -111,7 +111,23 @@ docker compose -f /data/core/edge/compose.yaml up -d --remove-orphans
 # Caddyfile/cert changes need a reload (bind mounts are read at start).
 docker compose -f /data/core/edge/compose.yaml restart caddy >/dev/null
 
-# ---- 7. metrics --------------------------------------------------------------
+# ---- 7. logs + metrics ---------------------------------------------------------
+# agent@* unit events -> /var/log/core/agent.log (tailed by the unified agent into core-log-app)
+mkdir -p /var/log/core && touch /var/log/core/agent.log && chown syslog:adm /var/log/core/agent.log && chmod 640 /var/log/core/agent.log
+cat > /etc/rsyslog.d/30-core-agent.conf <<'RSYSLOG'
+if ($programname startswith "agent@") or ($programname == "systemd" and $msg contains "agent@") then /var/log/core/agent.log
+RSYSLOG
+cat > /etc/logrotate.d/core <<'ROT'
+/var/log/core/*.log /var/log/core-bootstrap.log {
+  weekly
+  rotate 4
+  compress
+  missingok
+  notifempty
+  copytruncate
+}
+ROT
+systemctl restart rsyslog
 install_disk_metric_timer
 
 log "=== app bootstrap done"

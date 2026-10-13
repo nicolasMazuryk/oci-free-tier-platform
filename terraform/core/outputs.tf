@@ -17,3 +17,6 @@ output "ops_private_ip" { value = oci_core_instance.ops.private_ip }
 output "app_data_volume_id" { value = oci_core_volume.app_data.id }
 output "backup_policy_id" { value = oci_core_volume_backup_policy.daily_3d.id }
 output "app_user_data_bytes" { value = length(base64encode(local.cloud_init["app"])) }
+output "log_group_id" { value = oci_logging_log_group.core.id }
+output "app_log_id" { value = oci_logging_log.app.id }
+output "alarm_ids" { value = merge({ for k, a in oci_monitoring_alarm.core : k => a.id }, { "core-alarm-metrics-absent" = oci_monitoring_alarm.disk_absent.id }) }

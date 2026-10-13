@@ -27,3 +27,6 @@ secrets/
 .claude/settings.local.json
 .claude/worktrees/
 .DS_Store
+
+# wipe/restore scratch
+.last-wipe-backup

@@ -1,0 +1,18 @@
+# Nothing here is required: the Makefile exports tenancy/user OCIDs from ~/.oci/config.
+# Copy into terraform/<layer>/terraform.tfvars (gitignored) only to override defaults.
+# NEVER put secrets here; secrets live in Vault (make secret-put).
+
+# --- terraform/foundation ---
+# domain        = "mazuryktech.com"
+# alerts_email  = "alerts@example.com"
+# budget_amount = 1
+
+# --- terraform/core ---
+# app_ad_index          = 0      # 1 or 2 if A1 capacity is exhausted in AD-1 (ops must stay AD-1)
+# app_ocpus             = 2      # A1 total across tenancy must stay <= 4
+# app_memory_gb         = 12     # A1 total must stay <= 24
+# data_volume_gb        = 100    # boot+block total must stay <= 200
+# data_volume_backup_id = ""     # set by `make restore BACKUP=...`
+# bastion_client_cidrs  = ["0.0.0.0/0"]
+# git_user_name         = "nicolasMazuryk"
+# git_user_email        = "12008114+nicolasMazuryk@users.noreply.github.com"

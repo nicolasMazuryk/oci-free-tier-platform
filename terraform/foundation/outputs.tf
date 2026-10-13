@@ -21,3 +21,4 @@ output "dkim_cname_value" { value = oci_email_dkim.main.cname_record_value }
 output "apm_domain_id" { value = oci_apm_apm_domain.core.id }
 output "apm_data_upload_endpoint" { value = oci_apm_apm_domain.core.data_upload_endpoint }
 output "smtp_secret_id" { value = oci_vault_secret.smtp.id }
+output "alerts_email" { value = var.alerts_email }

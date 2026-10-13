@@ -114,11 +114,13 @@ resource "oci_monitoring_alarm" "core" {
 
 # Disk metric stops arriving = the reporting VM (or its timer) is dead.
 resource "oci_monitoring_alarm" "disk_absent" {
-  compartment_id               = local.compartment
-  metric_compartment_id        = local.compartment
-  display_name                 = "core-alarm-metrics-absent"
-  namespace                    = "core_custom"
-  query                        = "disk_used_pct[5m]{mount = \"/\"}.absent()"
+  compartment_id        = local.compartment
+  metric_compartment_id = local.compartment
+  display_name          = "core-alarm-metrics-absent"
+  namespace             = "core_custom"
+  # grouped by the stable host name: a rebuilt VM (new resourceId) must not leave
+  # the old instance stream "absent" forever
+  query                        = "disk_used_pct[5m]{mount = \"/\"}.groupBy(host).absent()"
   severity                     = "CRITICAL"
   pending_duration             = "PT15M"
   body                         = "No disk metric from a core VM for 15 min: the VM is down or core-disk-metric.timer stopped."

@@ -33,21 +33,28 @@ install_oci_cli() {
   ln -sf /opt/oci-cli/bin/oci /usr/local/bin/oci
 }
 
-install_docker() {
-  local data_root="$1"
+install_docker() { # install_docker <data-root> [classic]
+  # "classic" = disable Docker 29's containerd image store, so images, layers and
+  # container snapshots live under <data-root> (overlay2) instead of
+  # /var/lib/containerd on the boot volume. Required on app: /data is what gets
+  # backed up and restored, and a restore must bring containers back intact.
+  local data_root="$1" mode="${2:-}" features="" restart=0
+  [[ $mode == classic ]] && features=',
+  "features": { "containerd-snapshotter": false }'
   mkdir -p /etc/docker "$data_root"
-  cat > /etc/docker/daemon.json <<JSON
-{ "data-root": "$data_root",
-  "log-driver": "json-file",
-  "log-opts": { "max-size": "10m", "max-file": "3" } }
-JSON
+  local want
+  want="$(printf '{ "data-root": "%s",\n  "log-driver": "json-file",\n  "log-opts": { "max-size": "10m", "max-file": "3" }%s }\n' "$data_root" "$features")"
+  if [[ "$(cat /etc/docker/daemon.json 2>/dev/null)" != "$want" ]]; then
+    printf '%s' "$want" > /etc/docker/daemon.json; restart=1
+  fi
   if ! command -v docker >/dev/null; then
     log "installing Docker"
     curl -fsSL https://get.docker.com | sh >/dev/null
   fi
   systemctl enable --now docker
-  # pick up data-root changes
-  if [[ "$(docker info -f '{{.DockerRootDir}}')" != "$data_root" ]]; then systemctl restart docker; fi
+  if (( restart )) || [[ "$(docker info -f '{{.DockerRootDir}}')" != "$data_root" ]]; then
+    log "docker daemon.json changed: restarting docker"; systemctl restart docker
+  fi
   docker network inspect edge >/dev/null 2>&1 || docker network create edge >/dev/null
 }
 

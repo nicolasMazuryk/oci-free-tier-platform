@@ -51,6 +51,7 @@ make ssh VM=app CMD='sudo grep "^\[" /var/log/core-bootstrap.log | tail -20'
 | `Out of host capacity` (A1) | Retry later, or `app_ad_index = 1|2` |
 | cloudflare plan: `Vault secret core-secret-cf-api-token not found` | `make secret-put NAME=core-secret-cf-api-token` |
 | `Error acquiring the state lock` | Another apply is running. If it is stale: `terraform -chdir=terraform/<layer> force-unlock <id>` (be sure first) |
+| (host) `RWLayer of container ... is unexpectedly nil` on `docker compose up` | Docker data whose layers live outside `/data` (containerd image store). App bootstrap now disables it and recreates `core-edge` automatically. For a project container: `docker compose rm -fs && docker compose up -d --build` |
 | Perpetual diff on `cloudflare_origin_ca_certificate.hostnames` | Keep the list in API order: `["*.domain", "domain"]` |
 | Need an old state | Bucket versioning: `oci os object list-object-versions -bn core-bucket-tfstate --prefix core/` |
 

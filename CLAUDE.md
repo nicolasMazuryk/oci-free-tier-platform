@@ -65,6 +65,9 @@ make bootstrap                  # first-ever foundation deploy (local state, the
 4. **The VMs ignore `user_data` changes.** Editing `host/**` never recreates a VM. Push host changes with
    `make host-sync VM=...`. `bootstrap.sh` must stay **idempotent**: it runs on first boot, on every host-sync, and after a restore.
 5. **Restore safety:** `bootstrap.sh` only runs `mkfs` on the data volume when it has *no filesystem at all*. Never weaken this check.
+   Everything that must survive a restore must live on `/data`. On app, Docker runs with `containerd-snapshotter: false`
+   (`install_docker /data/docker classic`). Docker 29's default containerd image store would put layers in `/var/lib/containerd`
+   on the boot volume and break restored containers. Proven by the wipe/restore drill of 2026-10-13: see `docs/runbooks/wipe-and-restore.md`.
 6. **Origin is Cloudflare-only.**
    - `core-nsg-nlb` and `core-nsg-app` allow 443 only from https://www.cloudflare.com/ips-v4. The NLB uses preserve-source.
    - Never add `0.0.0.0/0` ingress, and never give a VM a public IP.

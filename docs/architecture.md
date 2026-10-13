@@ -103,7 +103,7 @@ Instance options:
 1. Waits for the data volume, runs `mkfs` **only if there is no filesystem**, and mounts it at `/data`.
 2. Sets up the 16 GB swap and installs packages.
 3. Installs the OCI CLI (venv at `/opt/oci-cli`) and Node 24 + pnpm.
-4. Installs Docker with data-root `/data/docker` and creates the `edge` network.
+4. Installs Docker with data-root `/data/docker`, with the containerd image store **disabled** (overlay2, so layers live on `/data` and survive a restore), and creates the `edge` network.
 5. Creates the `agent` user, or recreates it with the same uid/gid if `/data/home/agent` already exists (the restore case). The user gets passwordless sudo and is in the docker group.
 6. Installs Claude Code and sets settings to `defaultMode: auto`.
 7. Logs in to gh from `core-secret-github-pat`, if that secret exists.

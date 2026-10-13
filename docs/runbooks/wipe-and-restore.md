@@ -58,6 +58,32 @@ Then:
 - In the Claude app, check that the repo's Remote Control session is listed and that a new session creates a worktree.
 - Re-add any Kuma monitors that were added by hand in the UI. The standard set is recreated automatically.
 
+## Real timings (drill, 2026-10-13)
+
+| Step | Time |
+|---|---|
+| `make wipe`: FULL backup of 100 GB volume (~370 MB used) until AVAILABLE, then destroy of 69 resources | 3 m 37 s (20:34:37 to 20:38:14) |
+| `make restore`: apply of 69 resources (A1 capacity was available) | 1 m 27 s (20:38:35 to 20:40:02) |
+| app bootstrap on first boot (volume attach, swap, OCI CLI, Node, Docker, agent user, gh, Caddy) | about 3 min |
+| ops bootstrap (E2.1.Micro is slow: Docker install + Kuma image pull + first-run setup + provisioning) | about 14 min (20:40 to 20:54) |
+| Apex downtime (last 200 to first 200) | 14 m 51 s (20:36:52 to 20:51:43); this included about 9 min lost to the Docker image-store bug below. Expect **about 6 min** |
+| status.mazuryktech.com downtime | until 20:55:09, about 18.5 min, because it waits on the slow ops VM. It returned 502 while Kuma was localhost-only, and **never** showed `/setup` |
+
+The drill verified all of this with no manual steps:
+- the marker file and the `/data` listing hash matched
+- the agent's Claude login (`loggedIn: true`) and gh auth survived
+- `agent@offers-pipeline` came back **Connected** with the same Remote Control environment id and its session, and no trust prompt
+- Kuma's monitors and status page were recreated and UP
+- `make ssh` worked with the new host keys
+
+Two bugs were found and fixed during the drill:
+1. **Docker 29 containerd image store.** By default, image layers and container snapshots live in `/var/lib/containerd` on the *boot* volume, so the restored `/data/docker` had container metadata without layers. Caddy failed with `RWLayer of container ... is unexpectedly nil`.
+   - **Fix:** app's `daemon.json` now sets `"features": {"containerd-snapshotter": false}`, so everything (overlay2) is under `/data/docker` and is backed up.
+   - **Fix:** bootstrap also recreates `core-edge` if it fails to start.
+2. **`core-alarm-metrics-absent`** fired after the restore, because the destroyed instances' metric streams (old `resourceId`) stayed absent. It is now grouped by the stable `host` dimension (`.groupBy(host).absent()`).
+
+`make wipe` now stops `agent@*` on app before the backup, which gives a clean backup. Live Remote Control sessions resume after the restore.
+
 ## Clean up backups
 
 After a successful restore, delete old manual backups so you stay within 5 in total (3 come from the daily policy):

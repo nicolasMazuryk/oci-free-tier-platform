@@ -40,7 +40,7 @@ fi
 corepack enable 2>/dev/null || npm install -g pnpm >/dev/null
 
 # ---- 3. Docker (data-root on /data) ----------------------------------------
-install_docker /data/docker
+install_docker /data/docker classic
 mkdir -p /data/core/edge/certs /data/projects /data/fleet
 
 # ---- 4. agent user ------------------------------------------------------------
@@ -112,7 +112,13 @@ else
   log "WARN: could not read origin cert from Vault (keeping existing files if any)"
 fi
 umask 022
-docker compose -f /data/core/edge/compose.yaml up -d --remove-orphans
+# --force-recreate is not used: a healthy edge keeps running. If a container's
+# layer is missing (e.g. data restored from an image-store mismatch), recreate it.
+if ! docker compose -f /data/core/edge/compose.yaml up -d --remove-orphans; then
+  log "WARN: core-edge failed to start: recreating its containers"
+  docker compose -f /data/core/edge/compose.yaml rm -fs >/dev/null 2>&1 || true
+  docker compose -f /data/core/edge/compose.yaml up -d --remove-orphans
+fi
 # Caddyfile/cert changes need a reload (bind mounts are read at start).
 docker compose -f /data/core/edge/compose.yaml restart caddy >/dev/null
 

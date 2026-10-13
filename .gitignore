@@ -1,0 +1,29 @@
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+*.tfplan
+tfplan
+.terraform.tfstate.lock.info
+override.tf
+override.tf.json
+*_override.tf
+
+# Keys / secrets
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+oci_core*
+.env
+.env.*
+secrets/
+
+# Local tooling
+.claude/settings.local.json
+.claude/worktrees/
+.DS_Store

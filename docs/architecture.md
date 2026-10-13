@@ -35,7 +35,7 @@ NSGs:
 | NSG | Ingress |
 |---|---|
 | `core-nsg-nlb` (on the NLB) | TCP 443 from each Cloudflare IPv4 range (15 rules, fetched from cloudflare.com/ips-v4 at plan time). Egress 443 to `core-nsg-app`. |
-| `core-nsg-app` | TCP 443 from Cloudflare ranges (the NLB preserves the source IP); TCP 443 from `core-nsg-nlb` (health checks); TCP 22 from the Bastion endpoint /32 |
+| `core-nsg-app` | TCP 443 from Cloudflare ranges (the NLB preserves the source IP); TCP 443 from `core-nsg-nlb` (health checks); TCP 443 from `core-nsg-ops` (Kuma origin probe); TCP 22 from the Bastion endpoint /32 |
 | `core-nsg-ops` | TCP 3001 from `core-nsg-app` (Caddy proxies status.*); TCP 22 from the Bastion endpoint /32 |
 
 Host firewall: Oracle's Ubuntu image ends `INPUT` with REJECT. Bootstrap inserts ACCEPT rules for 443 (app) and 3001 (ops), both live and in `/etc/iptables/rules.v4`.
@@ -118,6 +118,7 @@ Instance options:
    - The script selects SQLite (`/setup-database`) and creates the admin from `core-secret-uptime-kuma-admin` over socket.io (`host/ops/uptime-kuma/kuma-init.js`).
    - Only after that does it publish on 0.0.0.0:3001.
    - It counts as initialised if the `user` table has at least one row.
+   - `kuma-provision.js` then ensures (idempotently, by name) the SMTP notification `core-email`, five monitors (apex keyword, the status page itself, a private TCP probe of app:443, GitHub, Anthropic API), the public status page `core`, and `entryPage = statusPage-core`. Auth stays on.
 3. Installs the weekly `core-cf-ip-drift` cron and the disk-metric timer.
 
 ## Identity and secrets
@@ -143,14 +144,14 @@ Instance options:
 | Disk usage | custom metric `core_custom/disk_used_pct{host,mount}`, posted every 5 min by `core-disk-metric.timer` on both VMs. It feeds `core-alarm-app-disk` (>85%) and `core-alarm-metrics-absent` (nothing for 15 min) |
 | NLB | `oci_nlb HealthyBackends < 1` feeds `core-alarm-nlb-health` |
 | Logs | `core-logs/core-log-app` (30 days). The unified agent `core-uac-app` tails Docker json logs, `/var/log/core/agent.log` (agent@* unit events via rsyslog) and `/var/log/core-bootstrap.log` |
-| Uptime | Uptime Kuma at https://status.mazuryktech.com |
+| Uptime | Uptime Kuma: the public status page at https://status.mazuryktech.com (`/status/core`). The admin `/dashboard` needs login. Kuma emails alerts through `core-email` (Email Delivery) |
 | Traces | `core-apm` (free tier). OTLP endpoint is `make output-foundation ARGS='-raw apm_data_upload_endpoint'`, auth key from `core-secret-apm-private-key` |
 | Alert fan-out | every alarm, the drift cron and `notify` in `/opt/core/lib.sh` publish to `core-topic-alerts`, which emails the alerts address |
 | Spend | `core-budget-monthly`: $1 on the whole tenancy, actual 50%/100% and forecast 100% |
 
 ## Known gaps / trade-offs
 
-- **Kuma data is not backed up.** It is on the ops boot volume. After a wipe/restore or an ops rebuild, Kuma comes back with the same admin login (from Vault) but no monitors.
+- **Kuma history is not backed up.** It is on the ops boot volume. After a wipe/restore or an ops rebuild, bootstrap recreates the login, notification, monitors and status page. Heartbeat history and monitors added by hand are lost.
 - The ops VM ships no logs, because the Custom Logs plugin is unsupported on the E2.1.Micro.
 - The `agent` user has passwordless sudo and docker by design (spec). Agents can do anything the instance principal allows.
 - The Bastion allows `0.0.0.0/0` as session clients. Sessions still need the `~/.ssh/oci_core` key. You can narrow this with `bastion_client_cidrs`.

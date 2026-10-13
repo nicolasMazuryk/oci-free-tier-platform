@@ -30,6 +30,7 @@ make ssh VM=app CMD='sudo grep "^\[" /var/log/core-bootstrap.log | tail -20'
 | 502 | Kuma down or still starting (`make ssh VM=ops CMD='sudo docker ps'`), or `core-nsg-ops` / iptables 3001 |
 | redirects to `/setup` or `/setup-database` | **Treat as a security incident.** Kuma was published before setup. Block it at once in Caddy on app: `sudo sed -i 's#reverse_proxy 10.0.2.20:3001#respond "maintenance" 503#' /data/core/edge/Caddyfile && sudo docker compose -f /data/core/edge/compose.yaml restart caddy`. Then run `make host-sync VM=ops` (it sets Kuma up from Vault on localhost), then `make host-sync VM=app` |
 | ops bootstrap `FATAL: uptime-kuma setup failed` | Kuma stays local-only, so it is safe. Check `sudo docker logs core-status-uptime-kuma-1` and re-run `make host-sync VM=ops` |
+| `/` goes to `/dashboard` instead of `/status/core`, or monitors are missing | Provisioning failed. Look for `uptime-kuma provisioning attempt` lines in `/var/log/core-bootstrap.log`, then run `make host-sync VM=ops` |
 
 ## Agent fleet
 

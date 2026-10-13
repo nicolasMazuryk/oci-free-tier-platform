@@ -19,6 +19,7 @@ locals {
       PROJECTS_COMPARTMENT_ID = local.f.projects_compartment_id
       VAULT_ID                = local.f.vault_id
       TOPIC_ID                = local.f.alerts_topic_id
+      ALERTS_EMAIL            = local.f.alerts_email
       APP_IP                  = var.app_private_ip
       OPS_IP                  = var.ops_private_ip
       GIT_USER_NAME           = var.git_user_name

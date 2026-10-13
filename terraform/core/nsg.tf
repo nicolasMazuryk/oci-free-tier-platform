@@ -91,6 +91,21 @@ resource "oci_core_network_security_group_security_rule" "app_in_nlb_hc" {
   }
 }
 
+resource "oci_core_network_security_group_security_rule" "app_in_ops_probe" {
+  network_security_group_id = oci_core_network_security_group.app.id
+  direction                 = "INGRESS"
+  protocol                  = "6"
+  source_type               = "NETWORK_SECURITY_GROUP"
+  source                    = oci_core_network_security_group.ops.id
+  description               = "uptime kuma origin probe from ops"
+  tcp_options {
+    destination_port_range {
+      min = 443
+      max = 443
+    }
+  }
+}
+
 resource "oci_core_network_security_group_security_rule" "app_in_ssh" {
   network_security_group_id = oci_core_network_security_group.app.id
   direction                 = "INGRESS"

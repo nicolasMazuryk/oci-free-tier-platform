@@ -10,7 +10,7 @@ The core layer (network, NLB, Bastion, VMs, volume, alarms, logs) can be destroy
 
 | Survives (`/data` restored from backup) | Lost (re-created by bootstrap) | Lost for good |
 |---|---|---|
-| agent home: Claude login, `~/.claude`, gh auth, pnpm store; `/data/fleet` clones + worktrees; Docker images/volumes/containers in `/data/docker`; `/data/projects` | OS packages, swap, users, systemd units, Caddy cert files (all reinstalled from code/Vault) | **Uptime Kuma data on the ops boot volume: monitors and history.** The admin login comes back from Vault. Also lost: log/metric history before the wipe (it stays in OCI, attached to the old OCIDs), and anything written outside `/data` on app. |
+| agent home: Claude login, `~/.claude`, gh auth, pnpm store; `/data/fleet` clones + worktrees; Docker images/volumes/containers in `/data/docker`; `/data/projects` | OS packages, swap, users, systemd units, Caddy cert files; **Uptime Kuma admin login, `core-email` notification, standard monitors, public status page `core` + entry page** (all from code/Vault) | **Uptime Kuma heartbeat history** and any monitors added by hand in the UI (Kuma data is on the unbacked ops boot volume). Also lost: log/metric history before the wipe (it stays in OCI, attached to the old OCIDs), and anything written outside `/data` on app. |
 
 ## Wipe
 
@@ -41,7 +41,7 @@ What happens:
 - Cached Bastion sessions and `~/.ssh/known_hosts_oci_core` are cleared, because the new VMs have new host keys.
 - On first boot, app bootstrap sees the existing ext4 `data` filesystem and **does not mkfs it**. It recreates `agent` with the original uid/gid, re-enables `agent@<repo>` for every clone, and brings Caddy up.
 - Containers with `restart: unless-stopped` come back with Docker.
-- ops bootstrap creates a fresh Kuma, set up from Vault before it is exposed.
+- ops bootstrap creates a fresh Kuma bound to localhost. It sets Kuma up from Vault, provisions the notification, monitors and status page `core`, and only then publishes it.
 
 ## Verify after restore
 
@@ -49,13 +49,14 @@ What happens:
 make plan-all
 make free-tier
 curl -sI https://mazuryktech.com | head -1
-curl -sI https://status.mazuryktech.com | head -3     # -> /dashboard, never /setup*
+curl -sI https://status.mazuryktech.com | grep -i location   # -> /status/core, never /setup*
+curl -s https://status.mazuryktech.com/api/status-page/heartbeat/core | jq '.heartbeatList|map_values(.[-1].status)'   # 1 = UP
 make ssh VM=app CMD='df -h /data; fleet ls; sudo -iu agent gh auth status; sudo -iu agent claude auth status; sudo docker ps'
 ```
 
 Then:
 - In the Claude app, check that the repo's Remote Control session is listed and that a new session creates a worktree.
-- Recreate the Uptime Kuma monitors (see [monitoring-alerts](monitoring-alerts.md)).
+- Re-add any Kuma monitors that were added by hand in the UI. The standard set is recreated automatically.
 
 ## Clean up backups
 

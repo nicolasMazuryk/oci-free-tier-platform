@@ -49,6 +49,22 @@ else
   kuma_initialised || { log "FATAL: uptime-kuma setup failed; Kuma stays local-only"; exit 1; }
   log "uptime-kuma initialised (admin login in Vault: core-secret-uptime-kuma-admin)"
 fi
+# Monitors, SMTP notification, public status page "core" (entry page). Idempotent.
+kuma_provision() {
+  local creds smtp
+  creds="$(secret_get core-secret-uptime-kuma-admin)" || return 1
+  smtp="$(secret_get core-secret-smtp 2>/dev/null)" || smtp=null
+  docker cp /opt/core/uptime-kuma/kuma-provision.js "$(kuma_ctr)":/tmp/kuma-provision.js >/dev/null
+  jq -n --argjson c "$creds" --argjson s "$smtp" --arg d "$DOMAIN" --arg a "$APP_IP" --arg t "${ALERTS_EMAIL:-}" \
+    '{user:$c.user, password:$c.password, domain:$d, appIp:$a, alertsTo:$t, smtp:(if $t == "" then null else $s end)}' \
+    | docker exec -i "$(kuma_ctr)" node /tmp/kuma-provision.js
+}
+[[ -n "${ALERTS_EMAIL:-}" ]] || log "WARN: ALERTS_EMAIL not in core.env: Kuma email notification skipped"
+for i in $(seq 1 5); do
+  if out="$(kuma_provision 2>&1)"; then printf '%s\n' "$out" | sed 's/^/[kuma] /'; break; fi
+  log "uptime-kuma provisioning attempt $i failed: $(tail -1 <<<"$out")"; sleep 10
+done
+
 kc 0.0.0.0 up -d --remove-orphans
 
 # cron: weekly Cloudflare IP drift check, disk metric every 5 min

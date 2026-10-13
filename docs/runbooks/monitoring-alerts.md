@@ -50,20 +50,36 @@ The unified agent config `core-uac-app` (app only; the plugin is unsupported on 
 
 ## Uptime Kuma (https://status.mazuryktech.com)
 
-- Login: user `admin`. Get the password with:
-  ```bash
-  oci secrets secret-bundle get-secret-bundle-by-name --vault-id $(make -s output-foundation ARGS='-raw vault_id') \
-    --secret-name core-secret-uptime-kuma-admin --query 'data."secret-bundle-content".content' --raw-output | base64 -d
-  ```
-- **Known gap: Kuma data is on the ops boot volume and is not backed up.** After a wipe/restore or an ops rebuild, the login comes back (from Vault) but **monitors and history are gone**. Re-add the standard set:
+**Public view:** `https://status.mazuryktech.com/` redirects to the public status page **`/status/core`**, titled "mazuryktech status". No login is needed.
 
-  | Monitor | Type | Target |
-  |---|---|---|
-  | apex | HTTP(s) | `https://mazuryktech.com` (expect 200) |
-  | each project | HTTP(s) | `https://<slug>[-<svc>].mazuryktech.com/health` |
+**Admin:** `/dashboard` still requires login. Auth is never disabled. The user is `admin`; get the password with:
+```bash
+oci secrets secret-bundle get-secret-bundle-by-name --vault-id $(make -s output-foundation ARGS='-raw vault_id') \
+  --secret-name core-secret-uptime-kuma-admin --query 'data."secret-bundle-content".content' --raw-output | base64 -d
+```
 
-  Notifications: add an SMTP notification using `core-secret-smtp` (587, STARTTLS, from `noreply@mazuryktech.com`).
-- **Security:** Kuma is only ever published after its first-run setup is complete. See CLAUDE.md invariant 7. Never put another unauthenticated or first-run UI behind Caddy.
+**Everything is provisioned by code.** On every ops bootstrap, `host/ops/uptime-kuma/kuma-provision.js` logs in over socket.io and ensures the following. Items are matched by name or slug, so a rerun never creates duplicates.
+
+| Item | Detail |
+|---|---|
+| Notification `core-email` | SMTP via OCI Email Delivery (`core-secret-smtp`, port 587 STARTTLS), from `noreply@mazuryktech.com` to `ALERTS_EMAIL` (in core.env). It is the default and applies to all monitors |
+| Monitor `mazuryktech.com` | keyword `core edge: ok` on `https://mazuryktech.com`, every 60 s (Cloudflare, then NLB, then Caddy) |
+| Monitor `status.mazuryktech.com` | HTTP 2xx on `https://status.mazuryktech.com/status/core`, every 60 s |
+| Monitor `core-vm-app origin :443 (private)` | TCP to `10.0.2.10:443` from ops, every 60 s. This bypasses Cloudflare and the NLB, and is allowed by NSG rule "uptime kuma origin probe from ops" |
+| Monitor `GitHub` | HTTP 2xx on `https://github.com`, every 300 s (agent dependency) |
+| Monitor `Anthropic API` | `https://api.anthropic.com`; any 200–499 counts as reachable; every 300 s |
+| Status page `core` | groups Sites / Origin / Dependencies, published, shows cert expiry, auto-refresh 300 s |
+| Settings | `entryPage = statusPage-core`, `disableAuth = false` |
+
+How the pieces relate:
+- **Add a monitor permanently:** add it to `wanted()` in `kuma-provision.js`, then run `make host-sync VM=ops`.
+- **Monitors added in the UI** work, but they are not recreated after a wipe.
+- **Existing monitors are not modified.** Provisioning only creates missing ones. To change a provisioned monitor's settings, edit it in the UI *and* in the script.
+- **Kuma alerts and OCI alarms are separate.** Kuma emails come through `core-email`. They are independent of `core-topic-alerts`.
+
+**Known gap:** Kuma data is on the ops boot volume and is not backed up. After a wipe/restore or an ops rebuild, the login, notification, monitors and status page come back automatically. **Heartbeat history** and any monitors added by hand are lost.
+
+**Security:** Kuma is only published after first-run setup is complete. See CLAUDE.md invariant 7. Never put another unauthenticated or first-run UI behind Caddy, and never set Kuma's `disableAuth`.
 
 ## Budget
 

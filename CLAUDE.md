@@ -72,6 +72,8 @@ make bootstrap                  # first-ever foundation deploy (local state, the
    - On 2026-10-13, Uptime Kuma's `/setup-database` page was reachable at status.mazuryktech.com for about 4 minutes before anyone set it up. Nobody claimed it.
    - The fix: bootstrap binds Kuma to 127.0.0.1, completes setup with credentials from Vault, and only then publishes it.
    - Any new self-hosted tool behind Caddy must be initialised (or have auth configured) *before* it gets a route.
+   - Kuma is public **only through its status page** (`/status/core`, which is the entry page for `/`). Never set `disableAuth`;
+     `/dashboard` stays behind login. Add monitors in `kuma-provision.js` (matched by name, so it is idempotent), not by hand.
 8. Keep `make plan-all` at "no changes". If the provider reorders a list (e.g. the origin cert hostnames), match the API's order.
 9. Commit on a branch and push. Never force-push. Never push to `main` without the human.
    Commit trailer: `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
@@ -122,7 +124,7 @@ Use `make output-<layer>` for OCIDs. Don't hard-code new OCIDs into code.
 | `core-secret-cf-api-token` | human (`secret-put`) | cloudflare layer provider |
 | `core-secret-github-pat` | human (`secret-put`) | app bootstrap: `gh auth login --with-token` for `agent` (skipped if absent) |
 | `core-secret-cf-origin-cert` / `-key` | cloudflare layer | app bootstrap, written to `/data/core/edge/certs/origin.{pem,key}` |
-| `core-secret-smtp` | foundation | JSON `{host,port,username,password,from}` |
+| `core-secret-smtp` | foundation | JSON `{host,port,username,password,from}`; also the Kuma `core-email` notification |
 | `core-secret-apm-public-key` / `-private-key` | foundation | OTLP to `core-apm` |
 | `core-secret-uptime-kuma-admin` | foundation (random) | ops bootstrap (Kuma first-run setup); human login |
 
@@ -149,9 +151,9 @@ The budget `core-budget-monthly` ($1, alerts at 50%/100%, plus a 100% forecast a
 
 ## Known gaps
 
-- **Uptime Kuma data is on the ops boot volume (`/opt/uptime-kuma/data`) and is not backed up.**
-  A wipe/restore or an ops VM rebuild gives you a fresh Kuma: the same admin login (from Vault), but **all monitors are lost**.
-  Recreate the monitors from the list in `docs/runbooks/monitoring-alerts.md`.
+- **Uptime Kuma history is lost on a wipe.** Its data is on the ops boot volume (`/opt/uptime-kuma/data`), which is not backed up.
+  The admin login, the `core-email` SMTP notification, the standard monitors and the public status page `core` are all
+  **recreated by ops bootstrap** (`host/ops/uptime-kuma/kuma-provision.js`), so only heartbeat history and hand-made monitors are lost.
 - The Custom Logs plugin is NOT_SUPPORTED on the ops E2.1.Micro (Ubuntu x86). Only app logs reach `core-log-app`.
 - agent@ output inside tmux is not logged. Only unit start/stop/fail events are, via rsyslog to `/var/log/core/agent.log`.
 - `main` has no commits yet. Work lives on `feat/core-infra`, which is the GitHub default branch until a human sets up `main`.
@@ -162,7 +164,8 @@ The budget `core-budget-monthly` ($1, alerts at 50%/100%, plus a 100% forecast a
 - `/var/log/core-bootstrap.log`: every bootstrap run.
 - On app: `/data/{home/agent,fleet,docker,core/edge,projects}`.
   - The edge (Caddy) is `docker compose -f /data/core/edge/compose.yaml ...`.
-- On ops: `/opt/uptime-kuma` and `/etc/cron.d/core-ops`.
+- On ops: `/opt/uptime-kuma` (data + compose) and `/etc/cron.d/core-ops`.
+  - Kuma provisioning: `/opt/core/uptime-kuma/kuma-{init,provision}.js`, run on every bootstrap.
 
 ## Runbooks
 

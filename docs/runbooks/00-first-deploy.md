@@ -65,7 +65,7 @@ make ssh VM=ops CMD='cloud-init status; sudo grep "^\[" /var/log/core-bootstrap.
 make plan-all                                  # no changes x3
 make free-tier                                 # PASS
 curl -sI https://mazuryktech.com | head -1     # 200
-curl -sI https://status.mazuryktech.com | head -3   # 302 -> /dashboard (NOT /setup*)
+curl -sI https://status.mazuryktech.com | grep -i location   # -> /status/core (NOT /setup*)
 curl -m 8 -k https://203.0.113.10           # must time out (Cloudflare-only)
 make ssh VM=app CMD='echo | openssl s_client -connect 127.0.0.1:443 -servername mazuryktech.com 2>/dev/null | openssl x509 -noout -issuer'
 ```
@@ -90,6 +90,6 @@ These steps need a **real terminal**.
    - `sudo -iu agent claude auth login`. Open the URL and paste the code back.
 3. **First repo:** `fleet add <repo>`, then `fleet attach <repo>`. Accept workspace trust and the Remote Control prompt, then detach with Ctrl-b d.
 4. **Push notifications:** in `/config` (or in the app), turn on *Push when Claude decides* and *Push when actions required*.
-5. **Uptime Kuma:**
-   - Log in at https://status.mazuryktech.com as `admin`. The password is in `core-secret-uptime-kuma-admin`; see [monitoring-alerts](monitoring-alerts.md).
-   - Add the standard monitors.
+5. **Uptime Kuma:** nothing to do.
+   - The public status page and the standard monitors are provisioned by ops bootstrap.
+   - The admin login (`/dashboard`) is `admin`, with the password in `core-secret-uptime-kuma-admin`; see [monitoring-alerts](monitoring-alerts.md).

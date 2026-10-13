@@ -37,6 +37,7 @@ make ssh VM=app CMD='sudo grep "^\[" /var/log/core-bootstrap.log | tail -20'
 | Symptom | Fix |
 |---|---|
 | `fleet ls` shows `agent@x` activating/failed in a loop | `fleet logs x`. Usually: not logged in (run `sudo -iu agent claude auth login` in a real terminal), or the repo dir is missing |
+| `fleet attach` fails with `missing or unsuitable terminal: xterm-ghostty` (or `xterm-kitty`, etc.) | The VM has no terminfo for your terminal. `fleet attach` and `make ssh` now fall back to `xterm-256color` automatically. Manual workaround: `TERM=xterm-256color fleet attach <repo>` |
 | Session not visible in the Claude app | `fleet attach x`. Is it waiting on a trust or Remote Control prompt? Accept it, then Ctrl-b d |
 | `git push` fails with 403 | PAT expired or missing permissions. Rotate `core-secret-github-pat`, then `make host-sync VM=app`. Check with `sudo -iu agent gh auth status` |
 | Everything slow | 2 OCPUs shared with builds. Check `top`, `core-alarm-app-cpu`/`-mem`, swap use (`free -m`) |

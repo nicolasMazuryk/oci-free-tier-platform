@@ -88,7 +88,12 @@ systemctl daemon-reload
 for d in /data/fleet/*/; do
   [[ -d "$d/.git" ]] || continue
   r="$(basename "$d")"
-  systemctl enable --now "agent@$r" && log "enabled agent@$r"
+  # never restart a running agent (users may be attached to its tmux session)
+  if systemctl is-active --quiet "agent@$r"; then
+    systemctl enable --quiet "agent@$r"; log "agent@$r already active: left running"
+  else
+    systemctl enable --now "agent@$r" && log "started agent@$r"
+  fi
 done
 
 # ---- 6. edge (Caddy) with Cloudflare Origin cert -----------------------------

@@ -2,6 +2,13 @@
 # fleet: manage Claude Code Remote Control servers (one systemd agent@<repo> per repo).
 set -euo pipefail
 cmd=${1:-}; name=${2:-}
+# tmux needs terminfo for $TERM; terminals like Ghostty/kitty send TERM values the VM lacks.
+fix_term() {
+  if ! infocmp "${TERM:-dumb}" >/dev/null 2>&1; then
+    echo "fleet: no terminfo for TERM=${TERM:-unset} on this host, using xterm-256color" >&2
+    export TERM=xterm-256color
+  fi
+}
 need_name() { [[ -n "$name" && "$name" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "repo name required"; exit 1; }; }
 case "$cmd" in
   add)    need_name
@@ -16,7 +23,7 @@ case "$cmd" in
           sudo systemctl disable --now "agent@$name"
           sudo rm -rf "/data/fleet/$name" ;;
   ls)     systemctl list-units 'agent@*' --all --no-legend ;;
-  attach) need_name; sudo -iu agent tmux -L "agent-$name" attach ;;
+  attach) need_name; fix_term; sudo -iu agent tmux -L "agent-$name" attach ;;
   logs)   need_name; journalctl -u "agent@$name" -f ;;
   restart) need_name; sudo systemctl restart "agent@$name" ;;
   *)      echo "usage: fleet add|rm|attach|logs|restart <repo> | fleet ls"; exit 1 ;;

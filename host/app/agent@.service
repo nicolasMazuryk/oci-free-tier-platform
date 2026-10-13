@@ -1,0 +1,21 @@
+[Unit]
+Description=Claude Code agent server for %i
+After=network-online.target data.mount
+Wants=network-online.target
+RequiresMountsFor=/data
+
+[Service]
+Type=forking
+User=agent
+WorkingDirectory=/data/fleet/%i
+Environment=HOME=/data/home/agent
+Environment=PATH=/data/home/agent/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/bin/tmux -L agent-%i new-session -d -s main \
+  "claude remote-control --spawn worktree --permission-mode auto --remote-control-session-name-prefix %i"
+ExecStop=/usr/bin/tmux -L agent-%i kill-server
+Restart=always
+RestartSec=30
+CPUWeight=200
+
+[Install]
+WantedBy=multi-user.target

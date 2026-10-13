@@ -1,0 +1,25 @@
+# Rendered by bootstrap.sh -> /data/core/edge/Caddyfile (__DOMAIN__, __OPS_IP__).
+# Container labels (caddy-docker-proxy) are merged on top of this file.
+{
+	auto_https disable_redirects
+}
+
+(cf_tls) {
+	tls /certs/origin.pem /certs/origin.key
+}
+
+__DOMAIN__ {
+	import cf_tls
+	respond "__DOMAIN__ core edge: ok" 200
+}
+
+status.__DOMAIN__ {
+	import cf_tls
+	reverse_proxy __OPS_IP__:3001
+}
+
+# Unknown subdomains: clean 404 instead of a TLS error at Cloudflare.
+*.__DOMAIN__ {
+	import cf_tls
+	respond "no such site" 404
+}

@@ -1,0 +1,19 @@
+name: core-edge
+services:
+  caddy:
+    image: lucaslorentz/caddy-docker-proxy:2.13.1-alpine
+    restart: unless-stopped
+    ports: ["443:443"]
+    environment:
+      CADDY_INGRESS_NETWORKS: edge
+      CADDY_DOCKER_CADDYFILE_PATH: /etc/caddy/Caddyfile
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./certs:/certs:ro
+      - caddy_data:/data
+    networks: [edge]
+networks:
+  edge: { external: true }
+volumes:
+  caddy_data:

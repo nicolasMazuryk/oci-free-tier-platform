@@ -79,5 +79,5 @@ variable "git_user_name" {
 }
 variable "git_user_email" {
   type    = string
-  default = "nicolasmazuryk@gmail.com"
+  default = "12008114+nicolasMazuryk@users.noreply.github.com"
 }

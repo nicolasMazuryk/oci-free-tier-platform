@@ -16,7 +16,7 @@ resource "tls_cert_request" "origin" {
 
 resource "cloudflare_origin_ca_certificate" "origin" {
   csr                = tls_cert_request.origin.cert_request_pem
-  hostnames          = [local.domain, "*.${local.domain}"]
+  hostnames          = ["*.${local.domain}", local.domain] # API order (avoids replace)
   request_type       = "origin-rsa"
   requested_validity = 5475
 }

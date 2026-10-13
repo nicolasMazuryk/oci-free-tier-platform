@@ -9,22 +9,24 @@ fix_term() {
     export TERM=xterm-256color
   fi
 }
+fix_term
+export SYSTEMD_PAGER=cat SYSTEMD_LESS=FRXMK
 need_name() { [[ -n "$name" && "$name" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "repo name required"; exit 1; }; }
 case "$cmd" in
   add)    need_name
           if [[ ! -d "/data/fleet/$name/.git" ]]; then
             sudo -iu agent git clone "https://github.com/nicolasMazuryk/$name.git" "/data/fleet/$name"
           fi
-          sudo systemctl enable --now "agent@$name"
+          sudo systemctl --no-pager enable --now "agent@$name"
           echo "First run: 'fleet attach $name' and accept the workspace trust prompt (Ctrl-b d to detach)" ;;
   rm)     need_name
           sudo -iu agent git -C "/data/fleet/$name" worktree list
           read -rp "Unpushed work above will be lost. Remove $name? [y/N] " ok; [[ $ok == y ]] || exit 1
-          sudo systemctl disable --now "agent@$name"
+          sudo systemctl --no-pager disable --now "agent@$name"
           sudo rm -rf "/data/fleet/$name" ;;
-  ls)     systemctl list-units 'agent@*' --all --no-legend ;;
-  attach) need_name; fix_term; sudo -iu agent tmux -L "agent-$name" attach ;;
-  logs)   need_name; journalctl -u "agent@$name" -f ;;
-  restart) need_name; sudo systemctl restart "agent@$name" ;;
+  ls)     systemctl --no-pager list-units 'agent@*' --all --no-legend ;;
+  attach) need_name; sudo -iu agent tmux -L "agent-$name" attach ;;
+  logs)   need_name; journalctl --no-pager -u "agent@$name" -f ;;
+  restart) need_name; sudo systemctl --no-pager restart "agent@$name" ;;
   *)      echo "usage: fleet add|rm|attach|logs|restart <repo> | fleet ls"; exit 1 ;;
 esac

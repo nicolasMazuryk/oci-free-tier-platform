@@ -5,6 +5,10 @@ terraform {
       source  = "oracle/oci"
       version = "~> 9.9"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.7"
+    }
   }
 }
 

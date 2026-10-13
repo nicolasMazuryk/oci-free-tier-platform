@@ -3,7 +3,9 @@ services:
   uptime-kuma:
     image: louislam/uptime-kuma:2.5.6-slim
     restart: unless-stopped
-    ports: ["3001:3001"]
+    # bootstrap.sh starts it on 127.0.0.1 until first-run setup is complete,
+    # then re-publishes on 0.0.0.0 (reached only by Caddy on core-vm-app via core-nsg-ops).
+    ports: ["${KUMA_BIND:-127.0.0.1}:3001:3001"]
     volumes:
       - ./data:/app/data
     mem_limit: 400m

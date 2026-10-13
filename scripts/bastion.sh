@@ -54,3 +54,23 @@ ssh_opts() {
             -o "UserKnownHostsFile=$KNOWN_HOSTS" -o ServerAliveInterval=30 -o ConnectTimeout=30)
   TARGET="ubuntu@$ip"
 }
+
+# ssh_config <vm> -> writes a per-VM ssh config, sets SSH_CFG and SSH_HOST (for rsync/scp)
+ssh_config() {
+  local vm="$1" sid ip
+  sid="$(session_for "$vm")"; ip="$(vm_ip "$vm")"
+  SSH_CFG="$CACHE_DIR/ssh_config-$vm"; SSH_HOST="core-$vm"
+  cat > "$SSH_CFG" <<CFG
+Host core-$vm
+  HostName $ip
+  User ubuntu
+  IdentityFile $SSH_KEY
+  IdentitiesOnly yes
+  StrictHostKeyChecking accept-new
+  UserKnownHostsFile $KNOWN_HOSTS
+  ServerAliveInterval 30
+  ConnectTimeout 30
+  LogLevel ERROR
+  ProxyCommand ssh -i $SSH_KEY -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=$KNOWN_HOSTS -o LogLevel=ERROR -W %h:%p -p 22 $sid@host.bastion.$REGION.oci.oraclecloud.com
+CFG
+}

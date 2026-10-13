@@ -32,7 +32,10 @@ resource "oci_logging_unified_agent_configuration" "app" {
       source_type = "LOG_TAIL"
       paths       = ["/data/docker/containers/*/*-json.log"]
       parser {
-        parser_type = "JSON"
+        parser_type    = "JSON"
+        field_time_key = "time" # docker json-file: RFC3339 with nanoseconds
+        time_type      = "STRING"
+        time_format    = "%Y-%m-%dT%H:%M:%S.%N%z"
       }
     }
     sources {

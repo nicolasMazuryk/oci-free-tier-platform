@@ -67,6 +67,18 @@ No inbound ports are involved. Each repo is one systemd `agent@<repo>` running
 `claude remote-control --spawn worktree --permission-mode auto` in tmux socket `agent-<repo>`.
 Each session started from the phone gets its own worktree under `/data/fleet/<repo>`.
 
+### Tailnet access
+
+```
+Mac / iPhone --Tailscale (WireGuard, outbound from both ends, DERP or direct)--> core-vm-app = node `cloud`, tag:cloud
+```
+
+- Tailscale SSH (users `agent`, `ubuntu`) and mosh (UDP 60000–61000, allowed on `tailscale0` only) are the daily path.
+  Bastion is break-glass. No NSG rule, public IP or open port is involved.
+- The tailnet policy (owned by cc-orchestrator, `config/tailscale/policy.hujson`) has no rule with `src: tag:cloud`:
+  the VM cannot open connections to the Mac or iPhone.
+- Node state is on `/data/core/tailscale`, so it survives a wipe/restore from backup.
+
 ## Compute and storage
 
 | Resource | Spec |
@@ -107,9 +119,11 @@ Instance options:
 5. Creates the `agent` user, or recreates it with the same uid/gid if `/data/home/agent` already exists (the restore case). The user gets passwordless sudo and is in the docker group.
 6. Installs Claude Code and sets settings to `defaultMode: auto`.
 7. Logs in to gh from `core-secret-github-pat`, if that secret exists.
-8. Installs `agent@.service` and `fleet`, and re-enables `agent@<repo>` for every clone in `/data/fleet`.
-9. Installs the Origin cert from Vault, renders the Caddyfile, and brings up `core-edge`.
-10. Sets up the rsyslog rule, logrotate, and the disk-metric timer.
+8. Installs Tailscale (state on `/data/core/tailscale`), joins as `cloud` / `tag:cloud` from `core-secret-tailscale-authkey`
+   (only when the node has no state yet), and allows mosh on `tailscale0`.
+9. Installs `agent@.service` and `fleet`, and re-enables `agent@<repo>` for every clone in `/data/fleet`.
+10. Installs the Origin cert from Vault, renders the Caddyfile, and brings up `core-edge`.
+11. Sets up the rsyslog rule, logrotate, and the disk-metric timer.
 
 `host/ops/bootstrap.sh`:
 1. Sets up swap and installs the OCI CLI and Docker.

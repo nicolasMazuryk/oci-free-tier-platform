@@ -40,6 +40,10 @@ What happens:
   `ignore_changes = [source_details]` means later plans without the var stay clean.
 - Cached Bastion sessions and `~/.ssh/known_hosts_oci_core` are cleared, because the new VMs have new host keys.
 - On first boot, app bootstrap sees the existing ext4 `data` filesystem and **does not mkfs it**. It recreates `agent` with the original uid/gid, re-enables `agent@<repo>` for every clone, and brings Caddy up.
+- Tailscale: the node state is on `/data/core/tailscale`, so a restore from backup rejoins as the same node `cloud`
+  (same 100.x IP, no auth key needed). With `BACKUP=none` there is no state: **first delete the old `cloud` machine in
+  the Tailscale admin console** (or the new node becomes `cloud-1`), and make sure `core-secret-tailscale-authkey` holds
+  a valid (unexpired) key.
 - Containers with `restart: unless-stopped` come back with Docker.
 - ops bootstrap creates a fresh Kuma bound to localhost. It sets Kuma up from Vault, provisions the notification, monitors and status page `core`, and only then publishes it.
 
@@ -52,6 +56,7 @@ curl -sI https://mazuryktech.com | head -1
 curl -sI https://status.mazuryktech.com | grep -i location   # -> /status/core, never /setup*
 curl -s https://status.mazuryktech.com/api/status-page/heartbeat/core | jq '.heartbeatList|map_values(.[-1].status)'   # 1 = UP
 make ssh VM=app CMD='df -h /data; fleet ls; sudo -iu agent gh auth status; sudo -iu agent claude auth status; sudo docker ps'
+ssh agent@cloud 'tailscale status --self --peers=false'   # from the Mac: rejoined as cloud
 ```
 
 Then:

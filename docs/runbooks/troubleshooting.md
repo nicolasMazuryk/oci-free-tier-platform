@@ -66,6 +66,15 @@ make ssh VM=app CMD='sudo grep "^\[" /var/log/core-bootstrap.log | tail -20'
 - **Drift cron fails with NotAuthorizedOrNotFound on NSG rules:**
   Listing rules needs `use network-security-groups`, which is in `core-pol-compute`.
 
+## Tailscale / mosh
+
+| Symptom | Fix |
+|---|---|
+| `ssh agent@cloud` hangs or `cloud` does not resolve | `make ssh VM=app CMD='tailscale status'`. `NeedsLogin`: put a valid key in `core-secret-tailscale-authkey`, then `make host-sync VM=app`. `grep -i tailscale /var/log/core-bootstrap.log` shows the last attempt |
+| Node joined as `cloud-1` | An old `cloud` machine still exists. Delete the stale one in the admin console, rename the new one to `cloud` |
+| `tailscale up` fails with "requested tags are invalid or not permitted" | The tailnet policy has no `tagOwners` entry for `tag:cloud`, or the key is not tagged `tag:cloud` |
+| `mosh agent@cloud`: "Nothing received from server" | `sudo iptables -S INPUT \| grep 60000` must show the `tailscale0` rule before the REJECT. Re-run `make host-sync VM=app` |
+
 ## Bastion / SSH
 
 See [access-ssh](access-ssh.md).

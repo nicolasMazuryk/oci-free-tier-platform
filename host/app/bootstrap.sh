@@ -28,7 +28,7 @@ resize2fs "$dev" >/dev/null 2>&1 || true
 # ---- 2. swap + base packages ------------------------------------------------
 ensure_swap 16G
 apt-get update -qq
-apt-get install -y -qq git tmux gh jq build-essential rsync unzip ca-certificates curl >/dev/null
+apt-get install -y -qq git tmux gh jq build-essential rsync unzip ca-certificates curl mosh >/dev/null
 install_oci_cli
 
 # Node LTS (system-wide) + pnpm via corepack
@@ -80,6 +80,65 @@ if pat="$(secret_get core-secret-github-pat)"; then
 else
   log "core-secret-github-pat not in Vault yet: skipping gh auth (Phase 6 hand-off)"
 fi
+
+# ---- 4b. tailnet access: Tailscale node `cloud` (tag:cloud) + mosh ------------
+# Daily access from the Mac / iPhone is Tailscale SSH and mosh (cc-orchestrator ADR 0001); Bastion stays
+# as break-glass. Tailscale is outbound-only: no public IP, no new ingress. Node state lives on /data, so a
+# restore from backup rejoins as the same node (same name and 100.x IP). Never fatal: a tailnet problem
+# must not stop the rest of the bootstrap.
+TS_HOSTNAME=cloud TS_TAGS=tag:cloud TS_STATE=/data/core/tailscale
+setup_tailscale() {
+  local dropin=/etc/systemd/system/tailscaled.service.d/10-core-state.conf want changed=0 state="" kf rc codename
+  mkdir -p "$TS_STATE" "${dropin%/*}" && chmod 700 "$TS_STATE" || return 1
+  want="[Unit]
+RequiresMountsFor=/data
+
+[Service]
+ExecStart=
+ExecStart=/usr/sbin/tailscaled --state=$TS_STATE/tailscaled.state --statedir=$TS_STATE --socket=/run/tailscale/tailscaled.sock --port=\${PORT} \$FLAGS"
+  if [[ "$(cat "$dropin" 2>/dev/null)" != "$want" ]]; then
+    printf '%s\n' "$want" > "$dropin" && systemctl daemon-reload || return 1
+    changed=1
+  fi
+  if ! command -v tailscale >/dev/null; then
+    log "installing Tailscale"
+    codename="$(. /etc/os-release && echo "$VERSION_CODENAME")"
+    curl -fsSL "https://pkgs.tailscale.com/stable/ubuntu/$codename.noarmor.gpg" -o /usr/share/keyrings/tailscale-archive-keyring.gpg \
+      && curl -fsSL "https://pkgs.tailscale.com/stable/ubuntu/$codename.tailscale-keyring.list" -o /etc/apt/sources.list.d/tailscale.list \
+      && apt-get update -qq && apt-get install -y -qq tailscale >/dev/null || return 1
+    changed=0 # first start already used the drop-in
+  fi
+  systemctl enable --quiet --now tailscaled || return 1
+  if (( changed )); then log "tailscaled state dir changed: restarting"; systemctl restart tailscaled || return 1; fi
+  for _ in $(seq 1 15); do
+    state="$(tailscale status --json 2>/dev/null | jq -r '.BackendState // empty')" || state=""
+    [[ -n $state && $state != NoState ]] && break; sleep 1
+  done
+  case "$state" in
+    Running) # already joined: keep the settings converged, never re-auth
+      tailscale set --ssh --hostname="$TS_HOSTNAME" --accept-dns=false || return 1
+      log "tailscale up as $(tailscale status --json | jq -r '.Self.DNSName')" ;;
+    Stopped) # logged in, but `tailscale down` was run
+      tailscale up --ssh --hostname="$TS_HOSTNAME" --advertise-tags="$TS_TAGS" --accept-dns=false --timeout=60s || return 1
+      log "tailscale brought back up" ;;
+    *) # NeedsLogin / fresh node: join with the reusable, tag:cloud auth key from Vault (never on argv)
+      kf="$(mktemp)"; chmod 600 "$kf"
+      if secret_get core-secret-tailscale-authkey > "$kf"; then
+        rc=0
+        tailscale up --ssh --hostname="$TS_HOSTNAME" --advertise-tags="$TS_TAGS" --accept-dns=false \
+          --auth-key="file:$kf" --timeout=60s || rc=$?
+        rm -f "$kf"
+        (( rc == 0 )) || return 1
+        log "tailscale joined as $(tailscale status --json | jq -r '.Self.DNSName')"
+      else
+        rm -f "$kf"
+        log "core-secret-tailscale-authkey not in Vault yet: skipping tailscale up (state: ${state:-unknown})"
+      fi ;;
+  esac
+}
+setup_tailscale || log "WARN: Tailscale setup failed (Bastion still works; fix, then make host-sync VM=app)"
+# mosh over the tailnet only (UDP 60000-61000 on tailscale0), before the image's REJECT, persisted
+allow_udp_on_iface tailscale0 60000:61000
 
 # ---- 5. fleet tooling --------------------------------------------------------
 install -m 0644 /opt/core/agent@.service /etc/systemd/system/agent@.service

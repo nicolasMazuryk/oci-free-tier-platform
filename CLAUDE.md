@@ -4,6 +4,10 @@ This repo is the Terraform and host provisioning for **core**, one reusable OCI 
 infrastructure in `uk-london-1`. It serves two purposes:
 
 1. An **agent fleet**: Claude Code Remote Control servers, `agent@<repo>`, on `core-vm-app`.
+   **Claude Code itself is moving to [cc-orchestrator](https://github.com/nicolasMazuryk/cc-orchestrator)**
+   (`~/Documents/cc-orchestrator`, its ADR 0002). This repo keeps the VM, disk, packages, the `agent` user,
+   Tailscale (node `cloud`, `tag:cloud`), the mosh firewall rule and Vault secrets. cc-orchestrator owns the
+   Claude Code scripts, Remote Control units, hooks and settings. Its Phase 4 removes `agent@.service` and `fleet` here.
 2. **Web hosting**: `*.mazuryktech.com` through Cloudflare, served by Caddy on `core-vm-app`.
 
 The original spec is `prompt.md`. Human docs are in `README.md`, `docs/architecture.md` and `docs/runbooks/`.
@@ -71,6 +75,8 @@ make bootstrap                  # first-ever foundation deploy (local state, the
 6. **Origin is Cloudflare-only.**
    - `core-nsg-nlb` and `core-nsg-app` allow 443 only from https://www.cloudflare.com/ips-v4. The NLB uses preserve-source.
    - Never add `0.0.0.0/0` ingress, and never give a VM a public IP.
+   - Tailscale on app is outbound-only (no NSG change). The only host-firewall opening for it is mosh,
+     UDP 60000–61000 on `tailscale0` (`allow_udp_on_iface`). Tailscale SSH needs no port. Bastion stays as break-glass.
 7. **Never expose a first-run or setup UI publicly.**
    - On 2026-10-13, Uptime Kuma's `/setup-database` page was reachable at status.mazuryktech.com for about 4 minutes before anyone set it up. Nobody claimed it.
    - The fix: bootstrap binds Kuma to 127.0.0.1, completes setup with credentials from Vault, and only then publishes it.
@@ -130,6 +136,8 @@ Use `make output-<layer>` for OCIDs. Don't hard-code new OCIDs into code.
 | `core-secret-smtp` | foundation | JSON `{host,port,username,password,from}`; also the Kuma `core-email` notification |
 | `core-secret-apm-public-key` / `-private-key` | foundation | OTLP to `core-apm` |
 | `core-secret-uptime-kuma-admin` | foundation (random) | ops bootstrap (Kuma first-run setup); human login |
+| `core-secret-tailscale-authkey` | human (`secret-put`) | app bootstrap: `tailscale up --auth-key=file:…` (reusable, tagged `tag:cloud`; only needed when the node has no state; skipped if absent) |
+| `core-secret-ntfy-topic` | human (`secret-put`) | cc-orchestrator `install.sh` (push topic recovery on rebuild); not read by bootstrap |
 
 Project secrets are `<slug>-secret-*`. `secret-put` puts them in compartment `projects`.
 
@@ -165,7 +173,9 @@ The budget `core-budget-monthly` ($1, alerts at 50%/100%, plus a 100% forecast a
 
 - `/opt/core/`: shipped host files plus `core.env` (rendered by Terraform; host-sync never overwrites it).
 - `/var/log/core-bootstrap.log`: every bootstrap run.
-- On app: `/data/{home/agent,fleet,docker,core/edge,projects}`.
+- On app: `/data/{home/agent,fleet,docker,core/edge,core/tailscale,projects}`.
+  - Tailscale node state is `/data/core/tailscale` (drop-in `tailscaled.service.d/10-core-state.conf`), so a restore
+    from backup rejoins as the same node `cloud`.
   - The edge (Caddy) is `docker compose -f /data/core/edge/compose.yaml ...`.
 - On ops: `/opt/uptime-kuma` (data + compose) and `/etc/cron.d/core-ops`.
   - Kuma provisioning: `/opt/core/uptime-kuma/kuma-{init,provision}.js`, run on every bootstrap.

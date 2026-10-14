@@ -29,7 +29,8 @@ Prerequisites:
 make help
 make init-foundation init-cloudflare init-core
 make plan-all            # all three layers should say "no changes"
-make ssh VM=app          # shell on the app VM via Bastion
+make ssh VM=app          # shell on the app VM via Bastion (break-glass)
+ssh agent@cloud          # daily access over Tailscale (see docs/runbooks/access-ssh.md)
 make free-tier           # Always-Free compliance check
 ```
 

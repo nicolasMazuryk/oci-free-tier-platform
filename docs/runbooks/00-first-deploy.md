@@ -90,6 +90,12 @@ These steps need a **real terminal**.
    - `sudo -iu agent claude auth login`. Open the URL and paste the code back.
 3. **First repo:** `fleet add <repo>`, then `fleet attach <repo>`. Accept workspace trust and the Remote Control prompt, then detach with Ctrl-b d.
 4. **Push notifications:** in `/config` (or in the app), turn on *Push when Claude decides* and *Push when actions required*.
-5. **Uptime Kuma:** nothing to do.
+5. **Tailscale (node `cloud`):** follow cc-orchestrator `docs/runbooks/tailscale.md`. In order:
+   - apply its tailnet policy (it defines `tag:cloud`)
+   - generate a reusable, tagged auth key
+   - `make secret-put NAME=core-secret-tailscale-authkey`
+   - `make host-sync VM=app`
+   Until then, bootstrap logs "not in Vault yet: skipping tailscale up", and Bastion is the only way in.
+6. **Uptime Kuma:** nothing to do.
    - The public status page and the standard monitors are provisioned by ops bootstrap.
    - The admin login (`/dashboard`) is `admin`, with the password in `core-secret-uptime-kuma-admin`; see [monitoring-alerts](monitoring-alerts.md).

@@ -100,3 +100,20 @@ UNIT
   systemctl daemon-reload
   systemctl enable --now core-disk-metric.timer
 }
+
+# Allow inbound UDP on one interface only (e.g. mosh over tailscale0), live and in
+# /etc/iptables/rules.v4. Inserted just before the image's final REJECT.
+#   allow_udp_on_iface tailscale0 60000:61000
+allow_udp_on_iface() {
+  local ifc="$1" ports="$2" rules=/etc/iptables/rules.v4 pos
+  local spec="-i $ifc -p udp -m udp --dport $ports -j ACCEPT"
+  # shellcheck disable=SC2086  # $spec is a fixed list of iptables words
+  if ! iptables -C INPUT $spec 2>/dev/null; then
+    pos="$(iptables -L INPUT -n --line-numbers | awk '$2 == "REJECT" { print $1; exit }')"
+    # shellcheck disable=SC2086
+    iptables -I INPUT "${pos:-1}" $spec
+  fi
+  if [[ -f $rules ]] && ! grep -qxF -- "-A INPUT $spec" "$rules"; then
+    sed -i "/^-A INPUT -j REJECT/i -A INPUT $spec" "$rules"
+  fi
+}

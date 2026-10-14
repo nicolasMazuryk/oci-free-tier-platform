@@ -39,6 +39,8 @@ How `secret-put` handles the value:
 | `core-secret-apm-*-key` | Rotate the data key in the APM console, then `make apply-foundation` (the secret is rebuilt from the data source) | Redeploy the instrumented apps |
 | `core-secret-uptime-kuma-admin` | `make apply-foundation ARGS='-replace=random_password.kuma_admin'` (Terraform owns this secret: do not `secret-put` it) | Read the new value from Vault and set it in Kuma (Settings, then Security, then Change Password). Bootstrap only uses it for first-run setup. |
 | `<slug>-secret-*` | `secret-put` | Re-render the project's `.env` and run `docker compose up -d` |
+| `core-secret-tailscale-authkey` | Tailscale admin console, then Settings, then Keys: generate an auth key (**reusable**, **not** ephemeral, tag `tag:cloud`, pre-approved), then `secret-put`. Revoke the old key | Nothing: a joined node keeps working without it. It is only read when the node has no state (first deploy, `make restore BACKUP=none`). Auth keys expire (max 90 days): put a fresh one in Vault before a planned rebuild |
+| `core-secret-ntfy-topic` | cc-orchestrator `docs/runbooks/rotate-secrets.md` | cc-orchestrator `./install.sh cloud` |
 
 ## Delete
 

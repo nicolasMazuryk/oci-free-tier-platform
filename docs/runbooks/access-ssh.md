@@ -1,4 +1,22 @@
-# Access: SSH through core-bastion
+# Access: Tailscale (daily) and SSH through core-bastion (break-glass)
+
+## Tailscale (daily)
+
+`core-vm-app` is the tailnet node **`cloud`** (`tag:cloud`, MagicDNS `cloud.tail70cd02.ts.net`). From the Mac or iPhone:
+
+```bash
+ssh agent@cloud           # Tailscale SSH: tailnet identity, no key (users agent, ubuntu)
+mosh agent@cloud          # mosh over the tailnet (UDP 60000-61000 on tailscale0 only)
+```
+
+- Installed and joined by app bootstrap (`setup_tailscale`). The auth key comes from Vault `core-secret-tailscale-authkey`.
+  It is only used when the node has no state. State lives on `/data/core/tailscale`.
+- The tailnet policy is in cc-orchestrator (`config/tailscale/policy.hujson`), not here. It allows members → `cloud` and
+  has **no** rule from `tag:cloud`, so the VM cannot reach the Mac or iPhone.
+- On the VM: `tailscale status`, `sudo iptables -S INPUT | grep 60000`, `systemctl status tailscaled`.
+- Claude Code on this VM (Agent View, Remote Control servers, settings) is documented in cc-orchestrator.
+
+## Bastion (break-glass)
 
 - Both VMs are in `core-snet-priv` and have no public IP.
 - Access goes through **OCI Bastion port-forwarding sessions**. These work without the Oracle Cloud Agent Bastion plugin.

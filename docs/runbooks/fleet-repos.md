@@ -1,5 +1,10 @@
 # Agent fleet: repos and sessions
 
+> **Moving to cc-orchestrator.** Claude Code on this VM is owned by
+> [cc-orchestrator](https://github.com/nicolasMazuryk/cc-orchestrator) (`docs/runbooks/add-repo.md` there). Its Phase 4
+> replaces `agent@<repo>` and `fleet` with `cc-rc@<repo>` and a Mac-side `fleet`. Until then, this page describes
+> what runs today.
+
 Each repo runs one Claude Code Remote Control server, `agent@<repo>` (systemd). It is a tmux session on socket `agent-<repo>`, running:
 
 ```

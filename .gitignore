@@ -21,6 +21,7 @@ id_rsa*
 oci_core*
 .env
 .env.*
+!.env.example
 secrets/
 
 # Local tooling

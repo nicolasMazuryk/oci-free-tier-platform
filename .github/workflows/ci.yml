@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.2
+      - name: terraform fmt
+        run: terraform fmt -check -recursive terraform
+      - name: terraform validate
+        run: |
+          for layer in foundation cloudflare core; do
+            terraform -chdir=terraform/$layer init -backend=false -input=false
+            terraform -chdir=terraform/$layer validate
+          done
+      - uses: terraform-linters/setup-tflint@v4
+      - name: tflint
+        run: |
+          for layer in foundation cloudflare core; do
+            tflint --chdir=terraform/$layer --init
+            tflint --chdir=terraform/$layer
+          done
+
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: shellcheck
+        run: shellcheck --severity=error -e SC2148 scripts/*.sh host/common/*.sh host/app/bootstrap.sh host/ops/bootstrap.sh host/ops/cf-ip-drift.sh

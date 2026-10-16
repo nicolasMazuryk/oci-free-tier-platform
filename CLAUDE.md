@@ -172,7 +172,7 @@ The budget `core-budget-monthly` ($1, alerts at 50%/100%, plus a 100% forecast a
   The admin login, the `core-email` SMTP notification, the standard monitors and the public status page `core` are all
   **recreated by ops bootstrap** (`host/ops/uptime-kuma/kuma-provision.js`), so only heartbeat history and hand-made monitors are lost.
 - The Custom Logs plugin is NOT_SUPPORTED on the ops E2.1.Micro (Ubuntu x86). Only cloud logs reach `core-log-cloud`.
-- Claude Code logs: cc-orchestrator's rsyslog rule writes `cc-rc@*` output and unit events to `/var/log/core/agent.log`, shipped by the unified agent. The Terraform strings still say "agent@* unit events" / "fleet ls" (`observability.tf`); fixing them is cosmetic and needs `make apply-core`.
+- Claude Code logs: cc-orchestrator's rsyslog rule writes `cc-rc@*` output and unit events to `/var/log/core/agent.log`, shipped by the unified agent. The Terraform log and alarm strings name `cc-rc@`/`cc-agents` (applied with `make apply-core`).
 - `main` has no commits yet. Work lives on `feat/core-infra`, which is the GitHub default branch until a human sets up `main`.
 
 ## Where things live on the VMs

@@ -9,7 +9,7 @@ The compute layer should be rebuildable from code, so that drift, a bad bootstra
 
 ## Decision
 
-- All mutable state of the app VM lives on one 100 GB block volume mounted at `/data`: the agent home, `/data/fleet` repos, the Docker data-root (overlay2, so layers survive), the edge compose files and certificates, deployed projects and Tailscale state.
+- All mutable state of the `cloud` VM lives on one 100 GB block volume mounted at `/data`: the agent home, `/data/fleet` repos, the Docker data-root (overlay2, so layers survive), the edge compose files and certificates, deployed projects and Tailscale state.
 - The volume is backed up daily by an incremental policy (keep 3). `make backup` takes a manual full backup, and `make wipe` always takes one before destroying the `core` layer.
 - `make restore BACKUP=<ocid>` recreates the layer and creates the volume from the backup. `bootstrap.sh` is idempotent: it only runs `mkfs` when there is no filesystem, and it recreates the `agent` user with the existing uid/gid when `/data/home/agent` exists.
 - Secrets live in Vault (`core-vault`, encrypted with `core-key-main`) and are read by instances through instance principals. The Vault is in the persistent foundation layer (ADR 0001).

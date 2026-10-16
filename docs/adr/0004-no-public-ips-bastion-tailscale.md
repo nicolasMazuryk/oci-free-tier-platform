@@ -11,7 +11,7 @@ The VMs need operator access (shells, deploys, `rsync`) and the agent VM needs t
 
 - Both VMs live in a private subnet with no public IP. Outbound traffic goes through a NAT gateway, and Oracle services through a service gateway.
 - **Break-glass access** is the OCI Bastion service. `make ssh` creates a port-forwarding session (reused for up to 3 h) and tunnels SSH through it. The NSGs allow port 22 only from the Bastion endpoint /32.
-- **Daily access** is Tailscale: the app VM joins the tailnet as node `cloud` (`tag:cloud`) with Tailscale SSH and mosh. Both ends connect outbound, so no NSG rule, public IP or open port is involved. The tailnet policy has no rule with `src: tag:cloud`, so the VM cannot open connections back to personal devices. This follows the same model as the `claude-code-fleet` project (its ADR 0001).
+- **Daily access** is Tailscale: the `cloud` VM joins the tailnet as node `cloud` (`tag:cloud`) with Tailscale SSH and mosh. Both ends connect outbound, so no NSG rule, public IP or open port is involved. The tailnet policy has no rule with `src: tag:cloud`, so the VM cannot open connections back to personal devices. This follows the same model as the `claude-code-fleet` project (its ADR 0001).
 - Node state is kept on `/data/core/tailscale`, so it survives a wipe and restore.
 
 ## Consequences

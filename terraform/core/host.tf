@@ -36,7 +36,7 @@ locals {
           path        = "/opt/core/${dst}"
           encoding    = "gz+b64"
           content     = base64gzip(file(src))
-          permissions = (endswith(dst, ".sh") || dst == "fleet") ? "0755" : "0644"
+          permissions = endswith(dst, ".sh") ? "0755" : "0644"
         }],
         [{
           path        = "/opt/core/core.env"

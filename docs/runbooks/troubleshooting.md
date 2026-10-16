@@ -36,9 +36,9 @@ make ssh VM=cloud CMD='sudo grep "^\[" /var/log/core-bootstrap.log | tail -20'
 
 | Symptom | Fix |
 |---|---|
-| `fleet ls` shows `agent@x` activating/failed in a loop | `fleet logs x`. Usually: not logged in (run `sudo -iu agent claude auth login` in a real terminal), or the repo dir is missing |
-| `fleet attach` fails with `missing or unsuitable terminal: xterm-ghostty` (or `xterm-kitty`, etc.) | The VM has no terminfo for your terminal. `fleet attach` and `make ssh` now fall back to `xterm-256color` automatically. Manual workaround: `TERM=xterm-256color fleet attach <repo>` |
-| Session not visible in the Claude app | `fleet attach x`. Is it waiting on a trust or Remote Control prompt? Accept it, then Ctrl-b d |
+| Claude Code / Remote Control problems (`cc-rc@<repo>`, Agent View, settings) | Owned by cc-orchestrator: its `docs/runbooks/troubleshooting.md`. From the Mac: `fleet logs cloud <repo>` |
+| `agent@<repo>` or `fleet` still on the VM | Legacy (pre cc-orchestrator Phase 4b). `make host-sync VM=cloud` removes them (bootstrap step 5) |
+| tmux fails with `missing or unsuitable terminal: xterm-ghostty` (or `xterm-kitty`, etc.) | The VM has no terminfo for your terminal. `make ssh` falls back to `xterm-256color` automatically. Manual workaround: `TERM=xterm-256color tmux …` |
 | `git push` fails with 403 | PAT expired or missing permissions. Rotate `core-secret-github-pat`, then `make host-sync VM=cloud`. Check with `sudo -iu agent gh auth status` |
 | Everything slow | 2 OCPUs shared with builds. Check `top`, `core-alarm-cloud-cpu`/`-mem`, swap use (`free -m`) |
 | Disk full | `sudo docker system df`, `sudo -iu agent pnpm store prune`, `git -C /data/fleet/<repo> worktree prune` |

@@ -3,11 +3,14 @@
 This repo is the Terraform and host provisioning for **core**, one reusable OCI Always-Free
 infrastructure in `uk-london-1`. It serves two purposes:
 
-1. An **agent fleet**: Claude Code Remote Control servers, `agent@<repo>`, on `core-vm-cloud`.
-   **Claude Code itself is moving to [cc-orchestrator](https://github.com/nicolasMazuryk/cc-orchestrator)**
-   (`~/Documents/cc-orchestrator`, its ADR 0002). This repo keeps the VM, disk, packages, the `agent` user,
-   Tailscale (node `cloud`, `tag:cloud`), the mosh firewall rule and Vault secrets. cc-orchestrator owns the
-   Claude Code scripts, Remote Control units, hooks and settings. Its Phase 4 removes `agent@.service` and `fleet` here.
+1. The **machine for an agent fleet** on `core-vm-cloud`. **Everything Claude Code is owned by
+   [cc-orchestrator](https://github.com/nicolasMazuryk/cc-orchestrator)** (`~/Documents/cc-orchestrator`, its ADR 0002):
+   the Claude Code binary, settings, hooks, Agent View (`cc-agents.service`), the Remote Control units
+   (`cc-rc@<repo>.service`), repos in `/data/fleet` and `fleet` (a Mac CLI). This repo keeps the VM, disk, packages,
+   the `agent` user (+ linger, sudo, gh auth), Tailscale (node `cloud`, `tag:cloud`), the mosh firewall rule, Vault
+   secrets and log shipping. **Never add Claude Code install/config/units here**; the bootstrap only removes the legacy
+   `agent@`/`fleet` setup older versions installed and never touches `cc-*` units.
+   Rebuild path: `make restore`/`make host-sync VM=cloud` here → `./install.sh cloud` in cc-orchestrator (from the Mac).
 2. **Web hosting**: `*.mazuryktech.com` through Cloudflare, served by Caddy on `core-vm-cloud`.
 
 The original spec is `prompt.md`. Human docs are in `README.md`, `docs/architecture.md` and `docs/runbooks/`.
@@ -53,7 +56,7 @@ make bootstrap                  # first-ever foundation deploy (local state, the
   Optional overrides are listed in `terraform.tfvars.example`.
 - macOS ships bash 3.2, so scripts avoid `${arr[@]}` on empty arrays under `set -u`. Use `${arr[@]+"${arr[@]}"}`.
 - The `!` shell inside Claude Code has **no TTY**. Interactive steps fail there: the `secret-put` hidden prompt,
-  `make ssh` without CMD, `claude auth login`, and `fleet attach`. To put a secret from it, use the file form:
+  `make ssh` without CMD and `claude auth login`. To put a secret from it, use the file form:
   `f=$(mktemp) && pbpaste > "$f" && make secret-put NAME=... FILE="$f"; rm -f "$f"`.
 
 ## Invariants: do not break these
@@ -110,8 +113,7 @@ Hostnames are one level only: `<slug>.mazuryktech.com` or `<slug>-<svc>.mazurykt
 `api.acme.mazuryktech.com` is **not** covered by the certificate.
 
 On the VM:
-- the systemd unit is `agent@<repo>`
-- the tmux socket is `agent-<repo>`
+- Claude Code units are cc-orchestrator's: `cc-rc@<repo>`, `cc-agents` (tmux session `fleet`). The legacy `agent@<repo>` / tmux socket `agent-<repo>` are gone.
 - the compose project is `<slug>`
 
 ## Real values (current deployment)
@@ -170,7 +172,7 @@ The budget `core-budget-monthly` ($1, alerts at 50%/100%, plus a 100% forecast a
   The admin login, the `core-email` SMTP notification, the standard monitors and the public status page `core` are all
   **recreated by ops bootstrap** (`host/ops/uptime-kuma/kuma-provision.js`), so only heartbeat history and hand-made monitors are lost.
 - The Custom Logs plugin is NOT_SUPPORTED on the ops E2.1.Micro (Ubuntu x86). Only cloud logs reach `core-log-cloud`.
-- agent@ output inside tmux is not logged. Only unit start/stop/fail events are, via rsyslog to `/var/log/core/agent.log`.
+- Claude Code logs: cc-orchestrator's rsyslog rule writes `cc-rc@*` output and unit events to `/var/log/core/agent.log`, shipped by the unified agent. The Terraform strings still say "agent@* unit events" / "fleet ls" (`observability.tf`); fixing them is cosmetic and needs `make apply-core`.
 - `main` has no commits yet. Work lives on `feat/core-infra`, which is the GitHub default branch until a human sets up `main`.
 
 ## Where things live on the VMs

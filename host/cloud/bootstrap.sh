@@ -97,12 +97,7 @@ chown agent:agent /data/fleet /data/projects
 loginctl enable-linger agent >/dev/null 2>&1 || true
 
 as_agent() { sudo -iu agent bash -lc "$1"; }
-if [[ ! -x /data/home/agent/.local/bin/claude ]]; then
-  log "installing Claude Code for agent"
-  as_agent 'curl -fsSL https://claude.ai/install.sh | bash' || log "WARN: claude install failed (re-run bootstrap)"
-fi
-as_agent 'grep -q ".local/bin" ~/.bashrc || echo "export PATH=\$HOME/.local/bin:\$PATH" >> ~/.bashrc'
-as_agent 'mkdir -p ~/.claude && [ -f ~/.claude/settings.json ] || echo "{ \"permissions\": { \"defaultMode\": \"auto\" } }" > ~/.claude/settings.json'
+# Claude Code itself (binary, settings, PATH, units) is installed by cc-orchestrator `./install.sh cloud`, not here.
 as_agent "git config --global user.name '${GIT_USER_NAME}' && git config --global user.email '${GIT_USER_EMAIL}' && git config --global init.defaultBranch main"
 
 # GitHub: fine-grained PAT from Vault, HTTPS only (skipped until the secret exists)
@@ -174,20 +169,30 @@ setup_tailscale || log "WARN: Tailscale setup failed (Bastion still works; fix, 
 # mosh over the tailnet only (UDP 60000-61000 on tailscale0), before the image's REJECT, persisted
 allow_udp_on_iface tailscale0 60000:61000
 
-# ---- 5. fleet tooling --------------------------------------------------------
-install -m 0644 /opt/core/agent@.service /etc/systemd/system/agent@.service
-install -m 0755 /opt/core/fleet /usr/local/bin/fleet
-systemctl daemon-reload
-for d in /data/fleet/*/; do
-  [[ -d "$d/.git" ]] || continue
-  r="$(basename "$d")"
-  # never restart a running agent (users may be attached to its tmux session)
-  if systemctl is-active --quiet "agent@$r"; then
-    systemctl enable --quiet "agent@$r"; log "agent@$r already active: left running"
-  else
-    systemctl enable --now "agent@$r" && log "started agent@$r"
-  fi
-done
+# ---- 5. Claude Code: owned by cc-orchestrator ---------------------------------
+# cc-orchestrator (github.com/nicolasMazuryk/cc-orchestrator, ADR 0002) installs the Claude Code binary, settings,
+# Agent View (cc-agents.service) and the Remote Control units (cc-rc@<repo>.service) with `./install.sh cloud`.
+# This bootstrap never touches cc-* units. It only removes what older versions of it installed (idempotent; a
+# no-op once clean). Stopping agent@<repo> first keeps one Remote Control server per folder.
+remove_legacy_claude_code() {
+  local u s changed=0
+  for u in $( { systemctl list-units 'agent@*' --all --plain --no-legend; systemctl list-unit-files 'agent@*' --no-legend; } \
+              | awk '$1 ~ /^agent@.+\.service$/ {print $1}' | sort -u); do
+    systemctl disable --now "$u" >/dev/null 2>&1 && log "legacy: stopped and disabled $u"
+  done
+  for s in /tmp/tmux-"$(id -u agent 2>/dev/null || echo none)"/agent-*; do
+    [[ -S $s ]] || continue
+    sudo -u agent tmux -S "$s" kill-server 2>/dev/null; rm -f "$s"; log "legacy: removed tmux server $s"
+  done
+  for f in /etc/systemd/system/agent@.service /usr/local/bin/fleet /opt/core/agent@.service /opt/core/fleet \
+           /etc/rsyslog.d/30-core-agent.conf; do
+    [[ -e $f ]] || continue
+    rm -f "$f" && log "legacy: removed $f" && changed=1
+  done
+  (( changed )) && systemctl daemon-reload
+  return 0
+}
+remove_legacy_claude_code || log "WARN: legacy Claude Code cleanup failed"
 
 # ---- 6. edge (Caddy) with Cloudflare Origin cert -----------------------------
 open_port 443
@@ -216,11 +221,9 @@ fi
 docker compose -f /data/core/edge/compose.yaml restart caddy >/dev/null
 
 # ---- 7. logs + metrics ---------------------------------------------------------
-# agent@* unit events -> /var/log/core/agent.log (tailed by the unified agent into core-log-cloud)
+# /var/log/core/agent.log is tailed by the unified agent into core-log-cloud. cc-orchestrator's rsyslog rule
+# (/etc/rsyslog.d/30-cc-orchestrator.conf) writes the cc-rc@<repo>/cc-agents output and unit events into it.
 mkdir -p /var/log/core && touch /var/log/core/agent.log && chown syslog:adm /var/log/core/agent.log && chmod 640 /var/log/core/agent.log
-cat > /etc/rsyslog.d/30-core-agent.conf <<'RSYSLOG'
-if ($programname startswith "agent@") or ($programname == "systemd" and $msg contains "agent@") then /var/log/core/agent.log
-RSYSLOG
 cat > /etc/logrotate.d/core <<'ROT'
 /var/log/core/*.log /var/log/core-bootstrap.log {
   weekly

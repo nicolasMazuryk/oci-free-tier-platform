@@ -106,8 +106,8 @@ resource "oci_core_volume_attachment" "cloud_data" {
   instance_id     = oci_core_instance.cloud.id
   volume_id       = oci_core_volume.cloud_data.id
   # display_name is ForceNew on attachments: renaming it would detach /data. Kept from before the rename.
-  display_name    = "core-att-app-data"
-  device          = "/dev/oracleoci/oraclevdb"
+  display_name = "core-att-app-data"
+  device       = "/dev/oracleoci/oraclevdb"
 }
 
 # Daily incremental, keep 3 (of 5 free backups).

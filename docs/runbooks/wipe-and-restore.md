@@ -21,7 +21,7 @@ make wipe            # asks you to type 'wipe'; in scripts: CONFIRM=wipe make wi
 1. `scripts/backup-now.sh` makes a **FULL** manual backup `core-bkp-manual-prewipe-<ts>` of `core-bv-cloud-data` and waits until it is AVAILABLE.
    - It refuses if 5 backups already exist (the free-tier cap). Delete an old manual one first:
      `oci bv backup list --compartment-id <core>`, then `oci bv backup delete --volume-backup-id ...`.
-   - For consistency, stop heavy writers first. For example, stop every agent with `sudo systemctl stop 'agent@*'`, and run `docker compose stop` for databases.
+   - For consistency, stop heavy writers first. For example, stop the Claude Code units with `sudo systemctl stop 'cc-rc@*' cc-agents`, and run `docker compose stop` for databases.
 2. The backup OCID is saved to `.last-wipe-backup` (gitignored). Keep a note of it anyway.
 3. `terraform destroy` runs on `terraform/core`. The reserved IP detaches from the NLB and stays.
 
@@ -39,7 +39,7 @@ What happens:
 - `terraform apply` runs with `-var data_volume_backup_id=<ocid>`. The new `core-bv-cloud-data` is created from the backup.
   `ignore_changes = [source_details]` means later plans without the var stay clean.
 - Cached Bastion sessions and `~/.ssh/known_hosts_oci_core` are cleared, because the new VMs have new host keys.
-- On first boot, cloud bootstrap sees the existing ext4 `data` filesystem and **does not mkfs it**. It recreates `agent` with the original uid/gid, re-enables `agent@<repo>` for every clone, and brings Caddy up.
+- On first boot, cloud bootstrap sees the existing ext4 `data` filesystem and **does not mkfs it**. It recreates `agent` with the original uid/gid and brings Caddy up. The Claude Code units (`cc-rc@<repo>`, `cc-agents`) are under `/etc` on the boot volume, so they come back from cc-orchestrator: run `./install.sh cloud` from the Mac (step below).
 - Tailscale: the node state is on `/data/core/tailscale`, so a restore from backup rejoins as the same node `cloud`
   (same 100.x IP, no auth key needed). With `BACKUP=none` there is no state: **first delete the old `cloud` machine in
   the Tailscale admin console** (or the new node becomes `cloud-1`), and make sure `core-secret-tailscale-authkey` holds
@@ -55,7 +55,9 @@ make free-tier
 curl -sI https://mazuryktech.com | head -1
 curl -sI https://status.mazuryktech.com | grep -i location   # -> /status/core, never /setup*
 curl -s https://status.mazuryktech.com/api/status-page/heartbeat/core | jq '.heartbeatList|map_values(.[-1].status)'   # 1 = UP
-make ssh VM=cloud CMD='df -h /data; fleet ls; sudo -iu agent gh auth status; sudo -iu agent claude auth status; sudo docker ps'
+make ssh VM=cloud CMD='df -h /data; sudo -iu agent gh auth status; sudo -iu agent .local/bin/claude auth status; sudo docker ps'
+# then Claude Code, from the Mac: cd ~/Documents/cc-orchestrator && ./install.sh cloud   (cc-orchestrator docs/runbooks/cloud-rebuild.md)
+ssh cloud 'systemctl list-units "cc-rc@*" cc-agents --no-legend'
 ssh agent@cloud 'tailscale status --self --peers=false'   # from the Mac: rejoined as cloud
 ```
 
@@ -87,7 +89,7 @@ Two bugs were found and fixed during the drill:
    - **Fix:** bootstrap also recreates `core-edge` if it fails to start.
 2. **`core-alarm-metrics-absent`** fired after the restore, because the destroyed instances' metric streams (old `resourceId`) stayed absent. It is now grouped by the stable `host` dimension (`.groupBy(host).absent()`).
 
-`make wipe` now stops `agent@*` on cloud before the backup, which gives a clean backup. Live Remote Control sessions resume after the restore.
+`make wipe` now stops the Claude Code units on cloud (`cc-rc@*`, `cc-agents`; `agent@*` at the time of the drill) before the backup, which gives a clean backup. Live Remote Control sessions resume after the restore.
 
 ## Clean up backups
 

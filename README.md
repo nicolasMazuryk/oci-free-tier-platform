@@ -7,7 +7,7 @@ Production-style platform on Oracle Cloud Always-Free: layered Terraform, Cloudf
 
 This is one fixed, reusable infrastructure in Oracle Cloud `uk-london-1`, managed with Terraform. It runs:
 
-- **an agent fleet:** 8–10 Claude Code Remote Control agents (`agent@<repo>`), driven from the Claude iPhone app or claude.ai/code. Each session gets its own git worktree.
+- **the machine for an agent fleet:** 8–10 Claude Code Remote Control servers on `core-vm-cloud`, driven from the Claude iPhone app or claude.ai/code. **Claude Code itself is owned by [cc-orchestrator](https://github.com/nicolasMazuryk/cc-orchestrator)** (`./install.sh cloud` there: `cc-rc@<repo>`, Agent View, settings). This repo provides the VM, `/data`, packages, the `agent` user, Tailscale, mosh and Vault.
 - **web hosting:** Node/Next.js containers at `*.mazuryktech.com`, through Cloudflare (Full strict, Origin CA) to the NLB and on to Caddy.
 
 Everything is Always-Free-eligible. The account is Pay-As-You-Go, so a $1 budget alert and `make free-tier` guard against charges.
@@ -18,7 +18,7 @@ flowchart LR
   cf -->|"443, Cloudflare ranges only"| nlb[core-nlb<br/>reserved public IP]
   nlb --> cloud["core-vm-cloud 10.0.2.10<br/>A1 2 OCPU / 12 GB<br/>/data 100 GB"]
   cloud --> caddy[Caddy core-edge] --> web[project containers<br/>network edge]
-  cloud --> agents["agent@repo x N"]
+  cloud --> agents["cc-rc@repo x N<br/>(installed by cc-orchestrator)"]
   agents -. outbound HTTPS .-> anthropic([Anthropic])
   nlb --> ops["core-vm-ops 10.0.2.20<br/>Uptime Kuma :3001"]
   op([Operator]) -. Tailscale .-> cloud
@@ -49,7 +49,7 @@ Starting from an empty tenancy: see [docs/runbooks/00-first-deploy.md](docs/runb
 
 | I want to... | Do |
 |---|---|
-| add a repo to the agent fleet | `make ssh VM=cloud`, then `fleet add <repo>` and `fleet attach <repo>` (accept trust). See [fleet-repos](docs/runbooks/fleet-repos.md) |
+| add a repo to the agent fleet | cc-orchestrator `docs/runbooks/add-repo.md` (`repo-init`, `config/cloud/repos.txt`). See [fleet-repos](docs/runbooks/fleet-repos.md) |
 | deploy a web project | compose with Caddy labels on network `edge`. See [web-projects](docs/runbooks/web-projects.md) |
 | store a secret | `make secret-put NAME=<slug>-secret-<purpose>` (hidden prompt) or `FILE=path` |
 | change host config (Caddy, units, scripts) | edit `host/**`, then `make host-sync VM=cloud\|ops` |
@@ -58,7 +58,7 @@ Starting from an empty tenancy: see [docs/runbooks/00-first-deploy.md](docs/runb
 
 > **No TTY?** The `!` shell in Claude Code cannot show hidden prompts. Use
 > `f=$(mktemp) && pbpaste > "$f" && make secret-put NAME=... FILE="$f"; rm -f "$f"`,
-> and do `make ssh` / `claude auth login` / `fleet attach` from a real terminal.
+> and do `make ssh` / `claude auth login` from a real terminal.
 
 ## Docs
 

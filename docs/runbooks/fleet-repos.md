@@ -1,53 +1,36 @@
-# Agent fleet: repos and sessions
+# Agent fleet: repos and sessions → cc-orchestrator
 
-> **Moving to cc-orchestrator.** Claude Code on this VM is owned by
-> [cc-orchestrator](https://github.com/nicolasMazuryk/cc-orchestrator) (`docs/runbooks/add-repo.md` there). Its Phase 4
-> replaces `agent@<repo>` and `fleet` with `cc-rc@<repo>` and a Mac-side `fleet`. Until then, this page describes
-> what runs today.
+**Claude Code on `core-vm-cloud` is owned by [cc-orchestrator](https://github.com/nicolasMazuryk/cc-orchestrator)**
+(`~/Documents/cc-orchestrator`, ADR 0002). This repo no longer installs Claude Code, `agent@<repo>` or `fleet`.
 
-Each repo runs one Claude Code Remote Control server, `agent@<repo>` (systemd). It is a tmux session on socket `agent-<repo>`, running:
-
-```
-claude remote-control --spawn worktree --permission-mode auto --remote-control-session-name-prefix <repo>
-```
-
-Every session you start from the Claude app's Code tab, or from claude.ai/code, gets its own git worktree in `/data/fleet/<repo>`.
-
-## One-time prerequisites (human, real terminal)
-
-1. `core-secret-github-pat` is in Vault, and `make host-sync VM=cloud` has run since. Check with `sudo -iu agent gh auth status`. See [00-first-deploy §5](00-first-deploy.md).
-2. `sudo -iu agent claude auth login` has been done.
-   - This needs a full claude.ai login. API keys and `setup-token` / `CLAUDE_CODE_OAUTH_TOKEN` do **not** work with Remote Control.
-3. Push notifications are on in `/config`.
-
-## Commands (on core-vm-cloud: `make ssh VM=cloud`)
-
-| Action | Command |
+| What | Where (cc-orchestrator) |
 |---|---|
-| Add a repo | `fleet add <repo>` clones `https://github.com/nicolasMazuryk/<repo>.git` into `/data/fleet/<repo>` and enables `agent@<repo>` |
-| First run only | `fleet attach <repo>`, accept the workspace trust (and Remote Control) prompt, then **Ctrl-b d** to detach |
-| List | `fleet ls` |
-| Logs | `fleet logs <repo>` (journal: start/stop/fail; also in `core-log-cloud`, source `/var/log/core/agent.log`) |
-| Restart | `fleet restart <repo>` |
-| Remove | `fleet rm <repo>` shows worktrees first. **Unpushed work is lost.** |
-| Prune stale worktrees | `sudo -iu agent git -C /data/fleet/<repo> worktree prune` |
+| Install / rebuild Claude Code on cloud (binary, settings, units) | `./install.sh cloud` from the Mac; `docs/runbooks/cloud-rebuild.md` |
+| Repos with a Remote Control server (`cloud/<repo>` in the Claude app) | `config/cloud/repos.txt`; units `cc-rc@<repo>` |
+| Add / remove a repo | `docs/runbooks/add-repo.md`, `remove-repo.md` (`repo-init`) |
+| Agent View | `cc-agents.service`, tmux session `fleet` (`ac` from the Mac) |
+| List / logs / restart | `fleet`, `fleet logs cloud <repo>`, `fleet restart cloud <repo>` (on the Mac) |
+| Upgrade Claude Code | `docs/runbooks/upgrade-claude-code.md` |
 
-Only personal repos are reachable, by design. The fine-grained PAT has a single owner, and there are no SSH keys or classic PATs on the VM.
+What this repo still provides for the fleet (bootstrap): `/data/fleet` and `/data/home/agent` on the persistent
+volume, the `agent` user (passwordless sudo, docker group, linger), Node 24 + pnpm, git identity, gh auth from
+`core-secret-github-pat`, Tailscale node `cloud`, mosh on `tailscale0`, and shipping of `/var/log/core/agent.log` to
+`core-log-cloud`.
 
-## Behaviour
+Old command → new:
 
-- **Crash or network drop:** systemd restarts the server after 30 s (`Restart=always`). Restarting in the same directory brings its sessions back for about 4 hours.
-- **Priority:** agents run with `CPUWeight=200`. That is a priority under contention, not a cap. Docker containers stay unlimited.
-- **Capacity:** 2 OCPU / 12 GB fits 8–10 mostly idle sessions.
-  - Concurrent `tsc`, tests or `next build` runs slow each other down.
-  - The 16 GB swap absorbs memory spikes.
-  - Watch `core-alarm-cloud-mem` and `core-alarm-cloud-cpu`.
-- **Disk:** use pnpm. Its content-addressable store is at `/data/home/agent`, so N worktrees don't duplicate `node_modules`. Watch `core-alarm-cloud-disk`.
-- **Permissions:**
-  - `~/.claude/settings.json` has `"defaultMode": "auto"`.
-  - The auto-mode classifier still blocks some high-risk actions, such as production deploys and fetching IMDS credentials. Approve those in the session, or add to `autoMode.environment`.
-  - The `agent` user has passwordless sudo and is in the docker group.
+| oci `fleet` (removed) | cc-orchestrator |
+|---|---|
+| `fleet add <repo>` | add to `config/cloud/repos.txt`, `./install.sh cloud` (clones it), then trust once: `ssh -t cloud 'repo-init <repo>'` |
+| `fleet attach <repo>` | `ac` (Agent View); Remote Control servers run headless under systemd |
+| `fleet ls` / `logs` / `restart` | `fleet` / `fleet logs cloud <repo>` / `fleet restart cloud <repo>` on the Mac |
+| `fleet rm <repo>` | cc-orchestrator `docs/runbooks/remove-repo.md` |
 
-## After a restore
+`make host-sync VM=cloud` removes any leftover `agent@*` units, `agent@.service`, `/usr/local/bin/fleet` and their
+tmux servers (bootstrap step 5), and never touches `cc-*` units.
 
-Nothing to do. `/data/home/agent` (login, gh auth) and `/data/fleet` come back from the backup, and bootstrap re-enables `agent@<repo>` for every clone.
+## Capacity notes (machine side)
+
+- 2 OCPU / 12 GB fits 8–10 mostly idle sessions; the 16 GB swap absorbs spikes. Watch `core-alarm-cloud-mem`/`-cpu`.
+- Disk: use pnpm (store under `/data/home/agent`, shared by worktrees). Watch `core-alarm-cloud-disk`.
+- Only personal repos are reachable: the fine-grained PAT has a single owner; no SSH keys or classic PATs on the VM.

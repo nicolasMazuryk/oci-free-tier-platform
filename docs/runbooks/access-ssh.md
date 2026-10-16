@@ -49,11 +49,11 @@ Firewalling:
 | Too many sessions | Each Bastion allows 20 active sessions. Old ones expire after 3 h. Delete with `oci bastion session delete --session-id ...` |
 | Need a port other than 22 (e.g. Kuma UI directly) | `ssh -F ~/.cache/oci-core/ssh_config-ops -L 3001:127.0.0.1:3001 core-ops` |
 
-## Agent / tmux access
+## Agent access
 
 ```bash
-make ssh VM=cloud
-fleet ls
-fleet attach <repo>        # Ctrl-b d to detach; do not Ctrl-c (that stops the server)
-sudo -iu agent             # agent shell (passwordless sudo, docker)
+ssh agent@cloud            # daily (Tailscale); `make ssh VM=cloud` then `sudo -iu agent` as break-glass
 ```
+
+Agent View, the Remote Control servers (`cc-rc@<repo>`) and `fleet` (on the Mac) are cc-orchestrator's: its
+`docs/runbooks/` (`ac` attaches to Agent View in tmux session `fleet`; `fleet logs|restart cloud <repo>`).

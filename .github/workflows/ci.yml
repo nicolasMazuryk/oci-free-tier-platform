@@ -25,8 +25,8 @@ jobs:
       - name: tflint
         run: |
           for layer in foundation cloudflare core; do
-            tflint --chdir=terraform/$layer --init
-            tflint --chdir=terraform/$layer
+            tflint --config="$GITHUB_WORKSPACE/.tflint.hcl" --chdir=terraform/$layer --init
+            tflint --config="$GITHUB_WORKSPACE/.tflint.hcl" --chdir=terraform/$layer
           done
 
   shellcheck:

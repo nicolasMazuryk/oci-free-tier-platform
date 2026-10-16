@@ -7,6 +7,9 @@
 # alerts_email  = "alerts@example.com"
 # budget_amount = 1
 
+# --- terraform/cloudflare ---
+# zone_id       = "<your Cloudflare zone id>"   # required
+
 # --- terraform/core ---
 # app_ad_index          = 0      # 1 or 2 if A1 capacity is exhausted in AD-1 (ops must stay AD-1)
 # app_ocpus             = 2      # A1 total across tenancy must stay <= 4

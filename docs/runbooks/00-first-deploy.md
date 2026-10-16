@@ -9,8 +9,8 @@ Expect about 45 minutes of work, plus waiting for emails and capacity.
 - The **SSH key**: `ssh-keygen -t rsa -b 4096 -N "" -f ~/.ssh/oci_core`.
 - The **Cloudflare zone** `mazuryktech.com` is active on Free.
 - The **hard-coded values** match your tenancy:
-  - the namespace in `terraform/*/backend.tf` and `remote_state.tf` (`YOUR_OCI_NAMESPACE`)
-  - `zone_id` in `terraform/cloudflare/variables.tf`
+  - nothing: the namespace comes from `oci os ns get` and is passed to `terraform init` by the Makefile (`TF_CLI_ARGS_init`)
+  - `zone_id` and `alerts_email`: set them in `terraform/<layer>/terraform.tfvars` (gitignored, see `terraform.tfvars.example`)
 
 ## 1. Foundation (state is bootstrapped locally, then migrated)
 

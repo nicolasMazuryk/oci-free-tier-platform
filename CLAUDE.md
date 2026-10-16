@@ -26,7 +26,7 @@ The account is **Pay-As-You-Go**. Anything that is not Always-Free is billed, so
 - Order of dependence: foundation, then cloudflare, then core. Downstream layers read
   `terraform_remote_state` from the oci backend.
 - DNS points at the **persistent reserved IP**, so wiping core never touches Cloudflare.
-- The bucket is `core-bucket-tfstate`, in namespace `YOUR_OCI_NAMESPACE`. It is versioned, and old versions expire after 90 days.
+- The bucket is `core-bucket-tfstate`, in your tenancy Object Storage namespace (`oci os ns get`). It is versioned, and old versions expire after 90 days.
 - The Cloudflare provider token is read from Vault (`core-secret-cf-api-token`). It is never in a file.
 
 ## Commands (always run from the repo root)
@@ -119,7 +119,7 @@ On the VM:
 | core-vm-ops | E2.1.Micro, AD-1 (the only AD that has it), `10.0.2.20`, boot 50 GB |
 | Bastion | `core-bastion`, private endpoint `10.0.2.183` |
 | Vault | `core-vault` (DEFAULT/shared), key `core-key-main` (SOFTWARE) |
-| Cloudflare zone | `mazuryktech.com`, id `YOUR_CLOUDFLARE_ZONE_ID`, Free plan, SSL strict |
+| Cloudflare zone | `mazuryktech.com`, id supplied via the `zone_id` variable, Free plan, SSL strict |
 | SMTP | `smtp.email.uk-london-1.oci.oraclecloud.com:587`, sender `noreply@mazuryktech.com` |
 | Alerts | `core-topic-alerts`, which emails alerts@example.com |
 | Images pinned | `lucaslorentz/caddy-docker-proxy:2.13.1-alpine`, `louislam/uptime-kuma:2.5.6-slim` |

@@ -2,7 +2,7 @@ data "terraform_remote_state" "foundation" {
   backend = "oci"
   config = {
     bucket              = "core-bucket-tfstate"
-    namespace           = "YOUR_OCI_NAMESPACE"
+    namespace           = var.oci_namespace
     key                 = "foundation/terraform.tfstate"
     region              = "uk-london-1"
     auth                = "APIKey"

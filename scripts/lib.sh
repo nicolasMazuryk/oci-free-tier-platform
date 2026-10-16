@@ -10,6 +10,10 @@ oci_cfg() { # oci_cfg <key>
 export TF_VAR_tenancy_ocid="${TF_VAR_tenancy_ocid:-$(oci_cfg tenancy)}"
 export TF_VAR_user_ocid="${TF_VAR_user_ocid:-$(oci_cfg user)}"
 export TF_VAR_oci_profile="${TF_VAR_oci_profile:-$OCI_CLI_PROFILE}"
+# Account-specific Object Storage namespace: never committed, resolved at run time.
+export OCI_NAMESPACE="${OCI_NAMESPACE:-$(oci os ns get --query data --raw-output 2>/dev/null || true)}"
+export TF_VAR_oci_namespace="${TF_VAR_oci_namespace:-$OCI_NAMESPACE}"
+export TF_CLI_ARGS_init="${TF_CLI_ARGS_init:--backend-config=namespace=$OCI_NAMESPACE}"
 
 tf() { terraform -chdir="$REPO_ROOT/terraform/$1" "${@:2}"; }
 tfout() { tf "$1" output -raw "$2"; }   # tfout <layer> <name>

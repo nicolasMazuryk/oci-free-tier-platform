@@ -81,3 +81,8 @@ variable "git_user_email" {
   type    = string
   default = "12008114+nicolasMazuryk@users.noreply.github.com"
 }
+
+variable "oci_namespace" {
+  description = "Object Storage namespace holding the Terraform state bucket (oci os ns get). Exported by the Makefile as TF_VAR_oci_namespace."
+  type        = string
+}

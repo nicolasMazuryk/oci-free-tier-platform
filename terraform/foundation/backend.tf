@@ -4,7 +4,6 @@
 terraform {
   backend "oci" {
     bucket              = "core-bucket-tfstate"
-    namespace           = "YOUR_OCI_NAMESPACE"
     key                 = "foundation/terraform.tfstate"
     region              = "uk-london-1"
     auth                = "APIKey"

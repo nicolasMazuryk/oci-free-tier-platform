@@ -11,6 +11,12 @@ export TF_VAR_user_ocid    ?= $(call oci_cfg,user)
 export TF_VAR_oci_profile  ?= $(OCI_PROFILE)
 export OCI_CLI_PROFILE     ?= $(OCI_PROFILE)
 
+# The Object Storage namespace is account-specific, so it is never committed:
+# the OCI backend gets it at init time, other layers read it as a variable.
+export OCI_NAMESPACE        ?= $(shell oci os ns get --query data --raw-output 2>/dev/null)
+export TF_VAR_oci_namespace ?= $(OCI_NAMESPACE)
+export TF_CLI_ARGS_init     ?= -backend-config=namespace=$(OCI_NAMESPACE)
+
 LAYERS := foundation cloudflare core
 TF = terraform -chdir=terraform/$(1)
 

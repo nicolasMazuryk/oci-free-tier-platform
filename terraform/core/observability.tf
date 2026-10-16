@@ -18,7 +18,7 @@ resource "oci_logging_log" "cloud" {
 resource "oci_logging_unified_agent_configuration" "cloud" {
   compartment_id = local.compartment
   display_name   = "core-uac-cloud"
-  description    = "Docker container logs, agent@* unit events, bootstrap log -> core-log-cloud"
+  description    = "Docker container logs, cc-rc@*/cc-agents unit events (cc-orchestrator), bootstrap log -> core-log-cloud"
   is_enabled     = true
   freeform_tags  = local.tags
 
@@ -69,7 +69,7 @@ locals {
       query = "CpuUtilization[5m]{resourceId = \"${oci_core_instance.cloud.id}\"}.mean() > 90"
       sev   = "WARNING"
       wait  = "PT15M"
-      body  = "core-vm-cloud CPU > 90% for 15 min. Check heavy builds/tests: make ssh VM=cloud, then top / fleet ls."
+      body  = "core-vm-cloud CPU > 90% for 15 min. Check heavy builds/tests: make ssh VM=cloud, then top; on the Mac: fleet."
     }
     "core-alarm-cloud-mem" = {
       ns    = "oci_computeagent"

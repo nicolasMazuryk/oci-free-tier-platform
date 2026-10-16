@@ -1,7 +1,7 @@
 # Agent fleet: repos and sessions → cc-orchestrator
 
-**Claude Code on `core-vm-cloud` is owned by [cc-orchestrator](https://github.com/nicolasMazuryk/cc-orchestrator)**
-(`~/Documents/cc-orchestrator`, ADR 0002). This repo no longer installs Claude Code, `agent@<repo>` or `fleet`.
+**Claude Code on `core-vm-cloud` is owned by [claude-code-fleet](https://github.com/nicolasMazuryk/claude-code-fleet)**
+(`~/Documents/claude-code-fleet`, ADR 0002). This repo no longer installs Claude Code, `agent@<repo>` or `fleet`.
 
 | What | Where (cc-orchestrator) |
 |---|---|

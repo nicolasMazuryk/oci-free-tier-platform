@@ -56,7 +56,7 @@ curl -sI https://mazuryktech.com | head -1
 curl -sI https://status.mazuryktech.com | grep -i location   # -> /status/core, never /setup*
 curl -s https://status.mazuryktech.com/api/status-page/heartbeat/core | jq '.heartbeatList|map_values(.[-1].status)'   # 1 = UP
 make ssh VM=cloud CMD='df -h /data; sudo -iu agent gh auth status; sudo -iu agent .local/bin/claude auth status; sudo docker ps'
-# then Claude Code, from the Mac: cd ~/Documents/cc-orchestrator && ./install.sh cloud   (cc-orchestrator docs/runbooks/cloud-rebuild.md)
+# then Claude Code, from the Mac: cd ~/Documents/claude-code-fleet && ./install.sh cloud   (claude-code-fleet docs/runbooks/cloud-rebuild.md)
 ssh cloud 'systemctl list-units "cc-rc@*" cc-agents --no-legend'
 ssh agent@cloud 'tailscale status --self --peers=false'   # from the Mac: rejoined as cloud
 ```

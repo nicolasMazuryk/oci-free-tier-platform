@@ -4,7 +4,7 @@ This repo is the Terraform and host provisioning for **core**, one reusable OCI 
 infrastructure in `uk-london-1`. It serves two purposes:
 
 1. The **machine for an agent fleet** on `core-vm-cloud`. **Everything Claude Code is owned by
-   [cc-orchestrator](https://github.com/nicolasMazuryk/cc-orchestrator)** (`~/Documents/cc-orchestrator`, its ADR 0002):
+   [claude-code-fleet](https://github.com/nicolasMazuryk/claude-code-fleet)** (`~/Documents/claude-code-fleet`, its ADR 0002):
    the Claude Code binary, settings, hooks, Agent View (`cc-agents.service`), the Remote Control units
    (`cc-rc@<repo>.service`), repos in `/data/fleet` and `fleet` (a Mac CLI). This repo keeps the VM, disk, packages,
    the `agent` user (+ linger, sudo, gh auth), Tailscale (node `cloud`, `tag:cloud`), the mosh firewall rule, Vault

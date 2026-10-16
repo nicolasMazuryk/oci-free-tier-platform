@@ -1,4 +1,9 @@
-# oci-infra: core (OCI Always-Free)
+# oci-free-tier-platform
+
+[![CI](https://github.com/nicolasMazuryk/oci-free-tier-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/nicolasMazuryk/oci-free-tier-platform/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+Production-style platform on Oracle Cloud Always-Free: layered Terraform, Cloudflare-only ingress, zero public IPs and a rehearsed wipe-and-restore drill.
 
 This is one fixed, reusable infrastructure in Oracle Cloud `uk-london-1`, managed with Terraform. It runs:
 
@@ -7,13 +12,17 @@ This is one fixed, reusable infrastructure in Oracle Cloud `uk-london-1`, manage
 
 Everything is Always-Free-eligible. The account is Pay-As-You-Go, so a $1 budget alert and `make free-tier` guard against charges.
 
-```
-Cloudflare (DNS/CDN/WAF, *.mazuryktech.com proxied)
-   -> 203.0.113.10  core-nlb (reserved IP, Cloudflare-only NSG, preserve source)
-       -> core-vm-app 10.0.2.10  (A1 2 OCPU/12 GB, /data 100 GB)
-            Caddy (core-edge) -> project containers on docker network "edge"
-            agent@<repo> x N  -> outbound HTTPS to Anthropic (no inbound ports)
-       -> status.mazuryktech.com -> core-vm-ops 10.0.2.20:3001 (Uptime Kuma)
+```mermaid
+flowchart LR
+  user([Browser]) --> cf[Cloudflare<br/>DNS / CDN / WAF<br/>*.mazuryktech.com proxied]
+  cf -->|"443, Cloudflare ranges only"| nlb[core-nlb<br/>reserved public IP]
+  nlb --> app["core-vm-app 10.0.2.10<br/>A1 2 OCPU / 12 GB<br/>/data 100 GB"]
+  app --> caddy[Caddy core-edge] --> web[project containers<br/>network edge]
+  app --> agents["agent@repo x N"]
+  agents -. outbound HTTPS .-> anthropic([Anthropic])
+  nlb --> ops["core-vm-ops 10.0.2.20<br/>Uptime Kuma :3001"]
+  op([Operator]) -. Tailscale .-> app
+  op -. OCI Bastion, break-glass .-> app
 ```
 
 ## Quickstart (operator laptop)
@@ -65,5 +74,17 @@ Starting from an empty tenancy: see [docs/runbooks/00-first-deploy.md](docs/runb
   - [monitoring-alerts](docs/runbooks/monitoring-alerts.md)
   - [cloudflare](docs/runbooks/cloudflare.md)
   - [troubleshooting](docs/runbooks/troubleshooting.md)
+- [docs/adr/](docs/adr/README.md): the five key design decisions (three Terraform layers, Always-Free guard, Cloudflare-only ingress, no public IPs, single data volume plus Vault)
 - [CLAUDE.md](CLAUDE.md): the operating manual for Claude Code agents working in this repo (invariants, guardrails)
 - [prompt.md](prompt.md): the original specification
+
+## Limitations
+
+- Uptime Kuma history lives on the ops boot volume and is not backed up (see [architecture](docs/architecture.md)).
+- The Bastion allows any client CIDR by default; narrow it with `bastion_client_cidrs`.
+- `mazuryktech.com` is the author's domain; set your own `domain` and `zone_id` to deploy.
+- CI checks formatting, validation and lint only. It never talks to a real tenancy.
+
+## License
+
+[MIT](LICENSE)

@@ -49,7 +49,7 @@ make bootstrap                  # first-ever foundation deploy (local state, the
 ```
 
 - The Makefile and `scripts/lib.sh` export `TF_VAR_tenancy_ocid` and `TF_VAR_user_ocid` from `~/.oci/config`
-  (profile `DEFAULT`, or `OCI_PROFILE=`). No `*.tfvars` file is needed.
+  (profile `DEFAULT`, or `OCI_PROFILE=`). A `terraform.tfvars` is only needed for the Cloudflare layer (`zone_id`, required) and to override defaults.
   Optional overrides are listed in `terraform.tfvars.example`.
 - macOS ships bash 3.2, so scripts avoid `${arr[@]}` on empty arrays under `set -u`. Use `${arr[@]+"${arr[@]}"}`.
 - The `!` shell inside Claude Code has **no TTY**. Interactive steps fail there: the `secret-put` hidden prompt,

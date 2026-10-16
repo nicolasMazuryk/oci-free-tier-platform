@@ -1,4 +1,4 @@
-# ---- Logging: core-logs / core-log-app (unified agent on core-vm-app) --------
+# ---- Logging: core-logs / core-log-cloud (unified agent on core-vm-cloud) --------
 resource "oci_logging_log_group" "core" {
   compartment_id = local.compartment
   display_name   = "core-logs"
@@ -6,26 +6,26 @@ resource "oci_logging_log_group" "core" {
   freeform_tags  = local.tags
 }
 
-resource "oci_logging_log" "app" {
+resource "oci_logging_log" "cloud" {
   log_group_id       = oci_logging_log_group.core.id
-  display_name       = "core-log-app"
+  display_name       = "core-log-cloud"
   log_type           = "CUSTOM"
   is_enabled         = true
   retention_duration = 30
   freeform_tags      = local.tags
 }
 
-resource "oci_logging_unified_agent_configuration" "app" {
+resource "oci_logging_unified_agent_configuration" "cloud" {
   compartment_id = local.compartment
-  display_name   = "core-uac-app"
-  description    = "Docker container logs, agent@* unit events, bootstrap log -> core-log-app"
+  display_name   = "core-uac-cloud"
+  description    = "Docker container logs, agent@* unit events, bootstrap log -> core-log-cloud"
   is_enabled     = true
   freeform_tags  = local.tags
 
   service_configuration {
     configuration_type = "LOGGING"
     destination {
-      log_object_id = oci_logging_log.app.id
+      log_object_id = oci_logging_log.cloud.id
     }
     sources {
       name        = "docker"
@@ -64,21 +64,21 @@ resource "oci_logging_unified_agent_configuration" "app" {
 # ---- Alarms -> core-topic-alerts ---------------------------------------------
 locals {
   alarms = {
-    "core-alarm-app-cpu" = {
+    "core-alarm-cloud-cpu" = {
       ns    = "oci_computeagent"
-      query = "CpuUtilization[5m]{resourceId = \"${oci_core_instance.app.id}\"}.mean() > 90"
+      query = "CpuUtilization[5m]{resourceId = \"${oci_core_instance.cloud.id}\"}.mean() > 90"
       sev   = "WARNING"
       wait  = "PT15M"
-      body  = "core-vm-app CPU > 90% for 15 min. Check heavy builds/tests: make ssh VM=app, then top / fleet ls."
+      body  = "core-vm-cloud CPU > 90% for 15 min. Check heavy builds/tests: make ssh VM=cloud, then top / fleet ls."
     }
-    "core-alarm-app-mem" = {
+    "core-alarm-cloud-mem" = {
       ns    = "oci_computeagent"
-      query = "MemoryUtilization[5m]{resourceId = \"${oci_core_instance.app.id}\"}.mean() > 90"
+      query = "MemoryUtilization[5m]{resourceId = \"${oci_core_instance.cloud.id}\"}.mean() > 90"
       sev   = "WARNING"
       wait  = "PT10M"
-      body  = "core-vm-app memory > 90% for 10 min (16 GB swap absorbs spikes; sustained = too many agents/containers)."
+      body  = "core-vm-cloud memory > 90% for 10 min (16 GB swap absorbs spikes; sustained = too many agents/containers)."
     }
-    "core-alarm-app-disk" = {
+    "core-alarm-cloud-disk" = {
       ns    = "core_custom"
       query = "disk_used_pct[5m].max() > 85"
       sev   = "CRITICAL"
@@ -90,7 +90,7 @@ locals {
       query = "HealthyBackends[1m]{resourceId = \"${oci_network_load_balancer_network_load_balancer.core.id}\"}.min() < 1"
       sev   = "CRITICAL"
       wait  = "PT5M"
-      body  = "core-nlb has no healthy backend: Caddy (core-edge) on core-vm-app is not answering on 443. All sites are down."
+      body  = "core-nlb has no healthy backend: Caddy (core-edge) on core-vm-cloud is not answering on 443. All sites are down."
     }
   }
 }

@@ -2,11 +2,25 @@
 # Reads /opt/core/core.env (rendered by terraform/core at VM creation).
 set -euo pipefail
 [[ -r /opt/core/core.env ]] && source /opt/core/core.env
+# core.env rendered before the app -> cloud rename (2026-10) still says APP_IP / ROLE="app".
+# migrate_core_env (run by bootstrap as root) rewrites it; until then, map the old name.
+: "${CLOUD_IP:=${APP_IP:-}}"
+[[ ${ROLE:-} == app ]] && ROLE=cloud
 export OCI_CLI_AUTH=instance_principal
 export OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING=True
 export PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 
 log() { echo "[$(date -u +%FT%TZ)] $*"; }
+
+# One-time, idempotent rename of pre-2026-10 keys in /opt/core/core.env (host-sync never ships core.env).
+migrate_core_env() {
+  local f=/opt/core/core.env
+  [[ -w $f ]] || return 0
+  if grep -qE '^(APP_IP=|ROLE="app"$)' "$f"; then
+    sed -i -e 's/^APP_IP=/CLOUD_IP=/' -e 's/^ROLE="app"$/ROLE="cloud"/' "$f"
+    log "core.env: renamed APP_IP -> CLOUD_IP, ROLE app -> cloud"
+  fi
+}
 
 # secret_get <name> -> prints decoded value, returns 1 if missing.
 # Looks in core first, then projects (for <slug>-secret-*).
@@ -36,7 +50,7 @@ install_oci_cli() {
 install_docker() { # install_docker <data-root> [classic]
   # "classic" = disable Docker 29's containerd image store, so images, layers and
   # container snapshots live under <data-root> (overlay2) instead of
-  # /var/lib/containerd on the boot volume. Required on app: /data is what gets
+  # /var/lib/containerd on the boot volume. Required on cloud: /data is what gets
   # backed up and restored, and a restore must bring containers back intact.
   local data_root="$1" mode="${2:-}" features="" restart=0
   [[ $mode == classic ]] && features=',

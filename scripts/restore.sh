@@ -20,4 +20,4 @@ tf core init -input=false >/dev/null
 # New VMs and a new Bastion: forget cached sessions and old host keys.
 rm -f "$HOME/.cache/oci-core/session-"* "$HOME/.ssh/known_hosts_oci_core"
 tf core apply -input=false -auto-approve ${args[@]+"${args[@]}"}
-log "applied. cloud-init re-runs bootstrap.sh on first boot (~5-10 min). Check: make ssh VM=app CMD='sudo tail -n 30 /var/log/core-bootstrap.log'"
+log "applied. cloud-init re-runs bootstrap.sh on first boot (~5-10 min). Check: make ssh VM=cloud CMD='sudo tail -n 30 /var/log/core-bootstrap.log'"

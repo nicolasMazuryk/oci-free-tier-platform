@@ -1,11 +1,45 @@
 #!/usr/bin/env bash
-# core-vm-app bootstrap. Idempotent: safe to re-run (cloud-init first boot,
-# `make host-sync VM=app`, or after a restore from backup).
+# core-vm-cloud bootstrap. Idempotent: safe to re-run (cloud-init first boot,
+# `make host-sync VM=cloud`, or after a restore from backup).
 source /opt/core/lib.sh
 exec > >(tee -a /var/log/core-bootstrap.log) 2>&1
-log "=== app bootstrap start"
+log "=== cloud bootstrap start"
 export DEBIAN_FRONTEND=noninteractive
 DATA_DEV=/dev/oracleoci/oraclevdb
+migrate_core_env
+
+# ---- 0. OS hostname `cloud` ---------------------------------------------------
+# Same name as the Tailscale node; Claude Code shows the OS hostname as the Remote Control device name.
+# cloud-init re-applies a hostname on every boot (preserve_hostname: false, and Oracle's drop-in sets
+# manage_etc_hosts: localhost), taken from IMDS unless the config names one. Pin it, so a reboot keeps
+# `cloud` whatever the VNIC hostname_label says. The 99-zz- prefix sorts after 99-oracle-*.
+OS_HOSTNAME=cloud
+set_os_hostname() {
+  local cfg=/etc/cloud/cloud.cfg.d/99-zz-core-hostname.cfg want
+  want="# managed by /opt/core/bootstrap.sh (oci-infra host/cloud)
+preserve_hostname: false
+hostname: $OS_HOSTNAME
+fqdn: $OS_HOSTNAME
+manage_etc_hosts: localhost"
+  if [[ "$(cat "$cfg" 2>/dev/null)" != "$want" ]]; then
+    printf '%s\n' "$want" > "$cfg" || return 1
+    log "cloud-init hostname drop-in written: $cfg"
+  fi
+  # /etc/hosts first, so sudo can resolve the new name the moment it is set
+  if ! grep -qE "^127\.0\.1\.1[[:space:]]+$OS_HOSTNAME([[:space:]]+$OS_HOSTNAME)?[[:space:]]*$" /etc/hosts; then
+    if grep -qE '^127\.0\.1\.1[[:space:]]' /etc/hosts; then
+      sed -i -E "s/^127\.0\.1\.1[[:space:]].*/127.0.1.1 $OS_HOSTNAME $OS_HOSTNAME/" /etc/hosts || return 1
+    else
+      echo "127.0.1.1 $OS_HOSTNAME $OS_HOSTNAME" >> /etc/hosts || return 1
+    fi
+    log "/etc/hosts: 127.0.1.1 -> $OS_HOSTNAME"
+  fi
+  if [[ "$(hostnamectl --static 2>/dev/null)" != "$OS_HOSTNAME" || "$(hostname)" != "$OS_HOSTNAME" ]]; then
+    hostnamectl set-hostname "$OS_HOSTNAME" || return 1
+    log "OS hostname set to $OS_HOSTNAME (running Remote Control servers keep their old device name until restarted)"
+  fi
+}
+set_os_hostname || log "WARN: could not set the OS hostname to $OS_HOSTNAME"
 
 # ---- 1. data volume (/data) -------------------------------------------------
 for i in $(seq 1 120); do [[ -b $DATA_DEV ]] && break; log "waiting for $DATA_DEV ($i)"; sleep 5; done
@@ -136,7 +170,7 @@ ExecStart=/usr/sbin/tailscaled --state=$TS_STATE/tailscaled.state --statedir=$TS
       fi ;;
   esac
 }
-setup_tailscale || log "WARN: Tailscale setup failed (Bastion still works; fix, then make host-sync VM=app)"
+setup_tailscale || log "WARN: Tailscale setup failed (Bastion still works; fix, then make host-sync VM=cloud)"
 # mosh over the tailnet only (UDP 60000-61000 on tailscale0), before the image's REJECT, persisted
 allow_udp_on_iface tailscale0 60000:61000
 
@@ -182,7 +216,7 @@ fi
 docker compose -f /data/core/edge/compose.yaml restart caddy >/dev/null
 
 # ---- 7. logs + metrics ---------------------------------------------------------
-# agent@* unit events -> /var/log/core/agent.log (tailed by the unified agent into core-log-app)
+# agent@* unit events -> /var/log/core/agent.log (tailed by the unified agent into core-log-cloud)
 mkdir -p /var/log/core && touch /var/log/core/agent.log && chown syslog:adm /var/log/core/agent.log && chmod 640 /var/log/core/agent.log
 cat > /etc/rsyslog.d/30-core-agent.conf <<'RSYSLOG'
 if ($programname startswith "agent@") or ($programname == "systemd" and $msg contains "agent@") then /var/log/core/agent.log
@@ -200,4 +234,4 @@ ROT
 systemctl restart rsyslog
 install_disk_metric_timer
 
-log "=== app bootstrap done"
+log "=== cloud bootstrap done"

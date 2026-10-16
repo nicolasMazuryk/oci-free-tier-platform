@@ -24,13 +24,13 @@ This tenancy is **Pay-As-You-Go**. Anything beyond Always-Free is billed immedia
 | APM | free-tier domain: 1000 tracing events/hour | core-apm | n/a |
 | Bastion | free | 1 | n/a |
 
-## Scaling the app VM (within free)
+## Scaling the cloud VM (within free)
 
 Set these in `terraform/core/terraform.tfvars` (gitignored):
 
 ```hcl
-app_ocpus     = 4
-app_memory_gb = 24
+cloud_ocpus     = 4
+cloud_memory_gb = 24
 ```
 
 - Changing the shape config of an A1 Flex instance makes OCI **reboot** it. `apply-core` shows it as an in-place update.
@@ -45,7 +45,7 @@ There is no free headroom. To grow `/data` by X GB, shrink something else by X:
 
 Resizing a volume online:
 1. Bump `data_volume_gb` and apply.
-2. Bootstrap's `resize2fs` grows the filesystem on the next `make host-sync VM=app`.
+2. Bootstrap's `resize2fs` grows the filesystem on the next `make host-sync VM=cloud`.
 3. You may need to rescan first: `sudo bash -c 'echo 1 > /sys/class/block/sdb/device/rescan'`.
 
 ## Things that are NOT free (do not create without the human)
@@ -65,5 +65,5 @@ Resizing a volume online:
 ## Capacity errors
 
 `Out of host capacity` for A1 in AD-1:
-- Retry later, or set `app_ad_index = 1` or `2`.
-- The data volume must be in the same AD as the instance. Terraform creates it in the instance's AD, and a volume backup can be restored into any AD, so `make restore BACKUP=...` with a new `app_ad_index` works.
+- Retry later, or set `cloud_ad_index = 1` or `2`.
+- The data volume must be in the same AD as the instance. Terraform creates it in the instance's AD, and a volume backup can be restored into any AD, so `make restore BACKUP=...` with a new `cloud_ad_index` works.

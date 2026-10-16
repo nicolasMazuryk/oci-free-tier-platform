@@ -49,13 +49,13 @@ make init-core apply-core
 ```
 
 - This creates about 68 resources: network, NSGs, NLB, Bastion, VMs, volume, backup policy, logs and alarms.
-- If you see **`Out of host capacity`** for A1, retry later, or set `app_ad_index = 1` (or 2) in `terraform/core/terraform.tfvars`.
+- If you see **`Out of host capacity`** for A1, retry later, or set `cloud_ad_index = 1` (or 2) in `terraform/core/terraform.tfvars`.
   ops must stay in AD-1.
-- Cloud-init runs `bootstrap.sh`. It takes about 4 minutes on app and about 12 minutes on ops (Micro).
+- Cloud-init runs `bootstrap.sh`. It takes about 4 minutes on cloud and about 12 minutes on ops (Micro).
 
 Check progress:
 ```bash
-make ssh VM=app CMD='cloud-init status; sudo grep "^\[" /var/log/core-bootstrap.log | tail'
+make ssh VM=cloud CMD='cloud-init status; sudo grep "^\[" /var/log/core-bootstrap.log | tail'
 make ssh VM=ops CMD='cloud-init status; sudo grep "^\[" /var/log/core-bootstrap.log | tail'
 ```
 
@@ -67,13 +67,13 @@ make free-tier                                 # PASS
 curl -sI https://mazuryktech.com | head -1     # 200
 curl -sI https://status.mazuryktech.com | grep -i location   # -> /status/core (NOT /setup*)
 curl -m 8 -k https://203.0.113.10           # must time out (Cloudflare-only)
-make ssh VM=app CMD='echo | openssl s_client -connect 127.0.0.1:443 -servername mazuryktech.com 2>/dev/null | openssl x509 -noout -issuer'
+make ssh VM=cloud CMD='echo | openssl s_client -connect 127.0.0.1:443 -servername mazuryktech.com 2>/dev/null | openssl x509 -noout -issuer'
 ```
 
 Also check, in the console or CLI:
 - every alarm is OK
-- `core-log-app` has records
-- the backup policy is attached to `core-bv-app-data`
+- `core-log-cloud` has records
+- the backup policy is attached to `core-bv-cloud-data`
 
 ## 5. Human hand-off (agent fleet)
 
@@ -84,9 +84,9 @@ These steps need a **real terminal**.
    - All repositories
    - Contents RW, Pull requests RW, Issues RW, Workflows RW, Metadata R
    - Store it: `make secret-put NAME=core-secret-github-pat` (or use the pbpaste variant above)
-   - Then run `make host-sync VM=app`. Bootstrap runs `gh auth login --with-token`, `gh auth setup-git` and `git_protocol https` for `agent`.
+   - Then run `make host-sync VM=cloud`. Bootstrap runs `gh auth login --with-token`, `gh auth setup-git` and `git_protocol https` for `agent`.
 2. **Claude login:**
-   - `make ssh VM=app`
+   - `make ssh VM=cloud`
    - `sudo -iu agent claude auth login`. Open the URL and paste the code back.
 3. **First repo:** `fleet add <repo>`, then `fleet attach <repo>`. Accept workspace trust and the Remote Control prompt, then detach with Ctrl-b d.
 4. **Push notifications:** in `/config` (or in the app), turn on *Push when Claude decides* and *Push when actions required*.
@@ -94,7 +94,7 @@ These steps need a **real terminal**.
    - apply its tailnet policy (it defines `tag:cloud`)
    - generate a reusable, tagged auth key
    - `make secret-put NAME=core-secret-tailscale-authkey`
-   - `make host-sync VM=app`
+   - `make host-sync VM=cloud`
    Until then, bootstrap logs "not in Vault yet: skipping tailscale up", and Bastion is the only way in.
 6. **Uptime Kuma:** nothing to do.
    - The public status page and the standard monitors are provisioned by ops bootstrap.

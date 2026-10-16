@@ -1,7 +1,7 @@
 output "vcn_id" { value = oci_core_vcn.core.id }
 output "pub_subnet_id" { value = oci_core_subnet.pub.id }
 output "priv_subnet_id" { value = oci_core_subnet.priv.id }
-output "nsg_app_id" { value = oci_core_network_security_group.app.id }
+output "nsg_cloud_id" { value = oci_core_network_security_group.cloud.id }
 output "nsg_ops_id" { value = oci_core_network_security_group.ops.id }
 output "nsg_nlb_id" { value = oci_core_network_security_group.nlb.id }
 output "nlb_id" { value = oci_network_load_balancer_network_load_balancer.core.id }
@@ -9,13 +9,13 @@ output "nlb_public_ip" { value = local.f.nlb_public_ip }
 output "bastion_id" { value = oci_bastion_bastion.core.id }
 output "bastion_private_ip" { value = oci_bastion_bastion.core.private_endpoint_ip_address }
 output "cloudflare_ipv4" { value = local.cf_ipv4 }
-output "app_instance_id" { value = oci_core_instance.app.id }
-output "app_private_ip" { value = oci_core_instance.app.private_ip }
-output "app_ad" { value = oci_core_instance.app.availability_domain }
+output "cloud_instance_id" { value = oci_core_instance.cloud.id }
+output "cloud_private_ip" { value = oci_core_instance.cloud.private_ip }
+output "cloud_ad" { value = oci_core_instance.cloud.availability_domain }
 output "ops_instance_id" { value = oci_core_instance.ops.id }
 output "ops_private_ip" { value = oci_core_instance.ops.private_ip }
-output "app_data_volume_id" { value = oci_core_volume.app_data.id }
+output "cloud_data_volume_id" { value = oci_core_volume.cloud_data.id }
 output "backup_policy_id" { value = oci_core_volume_backup_policy.daily_3d.id }
 output "log_group_id" { value = oci_logging_log_group.core.id }
-output "app_log_id" { value = oci_logging_log.app.id }
+output "cloud_log_id" { value = oci_logging_log.cloud.id }
 output "alarm_ids" { value = merge({ for k, a in oci_monitoring_alarm.core : k => a.id }, { "core-alarm-metrics-absent" = oci_monitoring_alarm.disk_absent.id }) }

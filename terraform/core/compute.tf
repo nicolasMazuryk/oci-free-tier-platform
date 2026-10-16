@@ -1,5 +1,5 @@
 data "oci_core_images" "ubuntu" {
-  for_each                 = { app = "VM.Standard.A1.Flex", ops = "VM.Standard.E2.1.Micro" }
+  for_each                 = { cloud = "VM.Standard.A1.Flex", ops = "VM.Standard.E2.1.Micro" }
   compartment_id           = local.compartment
   operating_system         = "Canonical Ubuntu"
   operating_system_version = "24.04"
@@ -19,33 +19,33 @@ locals {
   ssh_key  = trimspace(file(pathexpand(var.ssh_public_key_path)))
 }
 
-# ---- core-vm-app: A1 Flex (agent fleet + Caddy + web containers) ------------
-resource "oci_core_instance" "app" {
+# ---- core-vm-cloud: A1 Flex (agent fleet + Caddy + web containers) ------------
+resource "oci_core_instance" "cloud" {
   compartment_id      = local.compartment
-  availability_domain = local.ad_names[var.app_ad_index]
-  display_name        = "core-vm-app"
+  availability_domain = local.ad_names[var.cloud_ad_index]
+  display_name        = "core-vm-cloud"
   shape               = "VM.Standard.A1.Flex"
-  freeform_tags       = merge(local.tags, { "role" = "app" })
+  freeform_tags       = merge(local.tags, { "role" = "cloud" })
 
   shape_config {
-    ocpus         = var.app_ocpus
-    memory_in_gbs = var.app_memory_gb
+    ocpus         = var.cloud_ocpus
+    memory_in_gbs = var.cloud_memory_gb
   }
 
   source_details {
     source_type             = "image"
-    source_id               = data.oci_core_images.ubuntu["app"].images[0].id
+    source_id               = data.oci_core_images.ubuntu["cloud"].images[0].id
     boot_volume_size_in_gbs = var.boot_volume_gb
     boot_volume_vpus_per_gb = 10
   }
 
   create_vnic_details {
     subnet_id        = oci_core_subnet.priv.id
-    private_ip       = var.app_private_ip
+    private_ip       = var.cloud_private_ip
     assign_public_ip = false
-    hostname_label   = "app"
-    display_name     = "core-vnic-app"
-    nsg_ids          = [oci_core_network_security_group.app.id]
+    hostname_label   = "cloud"
+    display_name     = "core-vnic-cloud"
+    nsg_ids          = [oci_core_network_security_group.cloud.id]
   }
 
   instance_options {
@@ -71,7 +71,7 @@ resource "oci_core_instance" "app" {
 
   metadata = {
     ssh_authorized_keys = local.ssh_key
-    user_data           = base64encode(local.cloud_init["app"])
+    user_data           = base64encode(local.cloud_init["cloud"])
   }
 
   lifecycle {
@@ -80,13 +80,13 @@ resource "oci_core_instance" "app" {
 }
 
 # 100 GB /data: repos, worktrees, agent home, Docker. Restorable from backup.
-resource "oci_core_volume" "app_data" {
+resource "oci_core_volume" "cloud_data" {
   compartment_id      = local.compartment
-  availability_domain = oci_core_instance.app.availability_domain
-  display_name        = "core-bv-app-data"
+  availability_domain = oci_core_instance.cloud.availability_domain
+  display_name        = "core-bv-cloud-data"
   size_in_gbs         = var.data_volume_gb
   vpus_per_gb         = 10
-  freeform_tags       = merge(local.tags, { "role" = "app-data" })
+  freeform_tags       = merge(local.tags, { "role" = "cloud-data" })
 
   dynamic "source_details" {
     for_each = var.data_volume_backup_id == "" ? [] : [var.data_volume_backup_id]
@@ -101,10 +101,11 @@ resource "oci_core_volume" "app_data" {
   }
 }
 
-resource "oci_core_volume_attachment" "app_data" {
+resource "oci_core_volume_attachment" "cloud_data" {
   attachment_type = "paravirtualized"
-  instance_id     = oci_core_instance.app.id
-  volume_id       = oci_core_volume.app_data.id
+  instance_id     = oci_core_instance.cloud.id
+  volume_id       = oci_core_volume.cloud_data.id
+  # display_name is ForceNew on attachments: renaming it would detach /data. Kept from before the rename.
   display_name    = "core-att-app-data"
   device          = "/dev/oracleoci/oraclevdb"
 }
@@ -125,8 +126,8 @@ resource "oci_core_volume_backup_policy" "daily_3d" {
   }
 }
 
-resource "oci_core_volume_backup_policy_assignment" "app_data" {
-  asset_id  = oci_core_volume.app_data.id
+resource "oci_core_volume_backup_policy_assignment" "cloud_data" {
+  asset_id  = oci_core_volume.cloud_data.id
   policy_id = oci_core_volume_backup_policy.daily_3d.id
 }
 
@@ -182,9 +183,9 @@ resource "oci_core_instance" "ops" {
 }
 
 # ---- NLB backend -------------------------------------------------------------
-resource "oci_network_load_balancer_backend" "app" {
+resource "oci_network_load_balancer_backend" "cloud" {
   network_load_balancer_id = oci_network_load_balancer_network_load_balancer.core.id
   backend_set_name         = oci_network_load_balancer_backend_set.https.name
-  target_id                = oci_core_instance.app.id
+  target_id                = oci_core_instance.cloud.id
   port                     = 443
 }

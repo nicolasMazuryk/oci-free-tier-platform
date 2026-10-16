@@ -33,8 +33,8 @@ How `secret-put` handles the value:
 | Secret | Rotate how | Then |
 |---|---|---|
 | `core-secret-cf-api-token` | Roll the token in Cloudflare, then `secret-put` | `make plan-cloudflare` (it reads the new value) |
-| `core-secret-github-pat` | Regenerate the fine-grained PAT (same permissions), then `secret-put` | `make host-sync VM=app` re-logs in `agent` |
-| `core-secret-cf-origin-cert` / `-key` | `make apply-cloudflare ARGS='-replace=tls_private_key.origin'` issues a new key, CSR and Origin cert, and updates Vault | `make host-sync VM=app` reinstalls the cert and restarts Caddy |
+| `core-secret-github-pat` | Regenerate the fine-grained PAT (same permissions), then `secret-put` | `make host-sync VM=cloud` re-logs in `agent` |
+| `core-secret-cf-origin-cert` / `-key` | `make apply-cloudflare ARGS='-replace=tls_private_key.origin'` issues a new key, CSR and Origin cert, and updates Vault | `make host-sync VM=cloud` reinstalls the cert and restarts Caddy |
 | `core-secret-smtp` | `make apply-foundation ARGS='-replace=oci_identity_smtp_credential.core'` | Apps re-read the secret, or re-render `.env` |
 | `core-secret-apm-*-key` | Rotate the data key in the APM console, then `make apply-foundation` (the secret is rebuilt from the data source) | Redeploy the instrumented apps |
 | `core-secret-uptime-kuma-admin` | `make apply-foundation ARGS='-replace=random_password.kuma_admin'` (Terraform owns this secret: do not `secret-put` it) | Read the new value from Vault and set it in Kuma (Settings, then Security, then Change Password). Bootstrap only uses it for first-run setup. |

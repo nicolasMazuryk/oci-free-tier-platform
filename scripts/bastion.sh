@@ -4,7 +4,7 @@ KNOWN_HOSTS="$HOME/.ssh/known_hosts_oci_core"
 CACHE_DIR="$HOME/.cache/oci-core"; mkdir -p "$CACHE_DIR"
 REGION="${REGION:-uk-london-1}"
 
-vm_ip() { case "$1" in app) echo "${APP_IP:-10.0.2.10}";; ops) echo "${OPS_IP:-10.0.2.20}";; *) die "VM must be app|ops";; esac; }
+vm_ip() { case "$1" in cloud) echo "${CLOUD_IP:-10.0.2.10}";; ops) echo "${OPS_IP:-10.0.2.20}";; *) die "VM must be cloud|ops";; esac; }
 
 core_compartment() {
   local c="$CACHE_DIR/core-compartment"

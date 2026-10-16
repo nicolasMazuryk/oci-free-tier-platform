@@ -9,8 +9,8 @@ if [[ "${CONFIRM:-}" != wipe ]]; then
 fi
 if [[ "${SKIP_BACKUP:-}" != 1 ]]; then
   # Stop agents first so their state on /data is flushed (sessions resume after restore).
-  "$(dirname "$0")/ssh.sh" app "sudo systemctl --no-pager stop 'agent@*'; sync" </dev/null \
-    && log "stopped agent@* on app" || log "WARN: could not stop agents (VM down?): backing up anyway"
+  "$(dirname "$0")/ssh.sh" cloud "sudo systemctl --no-pager stop 'agent@*'; sync" </dev/null \
+    && log "stopped agent@* on cloud" || log "WARN: could not stop agents (VM down?): backing up anyway"
   bid="$("$(dirname "$0")/backup-now.sh" "prewipe-$(date -u +%Y%m%d-%H%M)")"
   echo "$bid" > "$REPO_ROOT/.last-wipe-backup"
   log "pre-wipe backup: $bid (also saved to .last-wipe-backup)"

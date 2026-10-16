@@ -15,19 +15,19 @@ Every session you start from the Claude app's Code tab, or from claude.ai/code, 
 
 ## One-time prerequisites (human, real terminal)
 
-1. `core-secret-github-pat` is in Vault, and `make host-sync VM=app` has run since. Check with `sudo -iu agent gh auth status`. See [00-first-deploy §5](00-first-deploy.md).
+1. `core-secret-github-pat` is in Vault, and `make host-sync VM=cloud` has run since. Check with `sudo -iu agent gh auth status`. See [00-first-deploy §5](00-first-deploy.md).
 2. `sudo -iu agent claude auth login` has been done.
    - This needs a full claude.ai login. API keys and `setup-token` / `CLAUDE_CODE_OAUTH_TOKEN` do **not** work with Remote Control.
 3. Push notifications are on in `/config`.
 
-## Commands (on core-vm-app: `make ssh VM=app`)
+## Commands (on core-vm-cloud: `make ssh VM=cloud`)
 
 | Action | Command |
 |---|---|
 | Add a repo | `fleet add <repo>` clones `https://github.com/nicolasMazuryk/<repo>.git` into `/data/fleet/<repo>` and enables `agent@<repo>` |
 | First run only | `fleet attach <repo>`, accept the workspace trust (and Remote Control) prompt, then **Ctrl-b d** to detach |
 | List | `fleet ls` |
-| Logs | `fleet logs <repo>` (journal: start/stop/fail; also in `core-log-app`, source `/var/log/core/agent.log`) |
+| Logs | `fleet logs <repo>` (journal: start/stop/fail; also in `core-log-cloud`, source `/var/log/core/agent.log`) |
 | Restart | `fleet restart <repo>` |
 | Remove | `fleet rm <repo>` shows worktrees first. **Unpushed work is lost.** |
 | Prune stale worktrees | `sudo -iu agent git -C /data/fleet/<repo> worktree prune` |
@@ -41,8 +41,8 @@ Only personal repos are reachable, by design. The fine-grained PAT has a single 
 - **Capacity:** 2 OCPU / 12 GB fits 8–10 mostly idle sessions.
   - Concurrent `tsc`, tests or `next build` runs slow each other down.
   - The 16 GB swap absorbs memory spikes.
-  - Watch `core-alarm-app-mem` and `core-alarm-app-cpu`.
-- **Disk:** use pnpm. Its content-addressable store is at `/data/home/agent`, so N worktrees don't duplicate `node_modules`. Watch `core-alarm-app-disk`.
+  - Watch `core-alarm-cloud-mem` and `core-alarm-cloud-cpu`.
+- **Disk:** use pnpm. Its content-addressable store is at `/data/home/agent`, so N worktrees don't duplicate `node_modules`. Watch `core-alarm-cloud-disk`.
 - **Permissions:**
   - `~/.claude/settings.json` has `"defaultMode": "auto"`.
   - The auto-mode classifier still blocks some high-risk actions, such as production deploys and fetching IMDS credentials. Approve those in the session, or add to `autoMode.environment`.

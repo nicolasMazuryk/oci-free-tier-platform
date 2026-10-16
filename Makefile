@@ -61,16 +61,17 @@ restore: ## Recreate core layer; BACKUP=<volume-backup-ocid> restores /data from
 	scripts/restore.sh $(BACKUP)
 
 .PHONY: backup
-backup: ## Manual backup of core-bv-app-data (NAME=optional-suffix)
+backup: ## Manual backup of core-bv-cloud-data (NAME=optional-suffix)
 	scripts/backup-now.sh $(NAME)
 
 ## ---- access / host ------------------------------------------------------
 .PHONY: ssh host-sync
-ssh: ## SSH to a VM through the Bastion (VM=app|ops)
-	scripts/ssh.sh $(or $(VM),app) $(CMD)
+ssh: ## SSH to a VM through the Bastion (VM=cloud|ops)
+	@# CMD goes through the environment as ONE argument: unquoted, a `;` in it would run the rest on the Mac
+	scripts/ssh.sh $(or $(VM),cloud) $(if $(CMD),"$$CMD")
 
-host-sync: ## rsync host/<VM>/ to /opt/core and re-run bootstrap.sh (VM=app|ops)
-	scripts/host-sync.sh $(or $(VM),app)
+host-sync: ## rsync host/<VM>/ to /opt/core and re-run bootstrap.sh (VM=cloud|ops)
+	scripts/host-sync.sh $(or $(VM),cloud)
 
 ## ---- secrets / guardrails -----------------------------------------------
 .PHONY: secret-put free-tier drift
@@ -80,5 +81,5 @@ secret-put: ## Create/update a Vault secret: NAME=core-secret-x [FILE=path] (pro
 free-tier: ## List resources and flag anything not Always-Free
 	scripts/check-free-tier.sh
 
-drift: ## Compare Cloudflare IPv4 ranges with core-nsg-app rules
+drift: ## Compare Cloudflare IPv4 ranges with core-nsg-cloud rules
 	scripts/cf-ip-drift-local.sh

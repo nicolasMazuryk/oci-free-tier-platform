@@ -1,9 +1,9 @@
 // Idempotent Uptime Kuma provisioning. Runs INSIDE the container (copied in by bootstrap.sh):
 //   docker exec -i <ctr> node /tmp/kuma-provision.js < input.json
-// input: {user, password, domain, appIp, alertsTo, smtp:{host,port,username,password,from}|null, test:false}
+// input: {user, password, domain, cloudIp, alertsTo, smtp:{host,port,username,password,from}|null, test:false}
 // Ensures (matched by name/slug, never duplicated):
 //   - SMTP notification "core-email" (default, applied to all monitors)
-//   - the standard monitor set below
+//   - the standard monitor set below (a `renamedFrom` monitor is renamed in place, keeping its history)
 //   - public status page "core" with those monitors, set as the entry page
 // Auth is NOT disabled: /dashboard stays behind login.
 const { io } = require("/app/node_modules/socket.io-client");
@@ -37,8 +37,9 @@ function wanted(cfg) {
       description: "Apex through Cloudflare -> core-nlb -> Caddy" },
     { group: "Sites", name: `status.${d}`, type: "http", url: `https://status.${d}/status/core`,
       description: "This status page through Cloudflare (Caddy -> ops)" },
-    { group: "Origin", name: "core-vm-app origin :443 (private)", type: "port", hostname: cfg.appIp, port: 443,
-      description: "Caddy on core-vm-app over the private network (bypasses Cloudflare/NLB)" },
+    { group: "Origin", name: "core-vm-cloud origin :443 (private)", type: "port", hostname: cfg.cloudIp, port: 443,
+      renamedFrom: "core-vm-app origin :443 (private)",
+      description: "Caddy on core-vm-cloud over the private network (bypasses Cloudflare/NLB)" },
     { group: "Dependencies", name: "GitHub", type: "http", url: "https://github.com", interval: 300,
       description: "Agent fleet dependency (git over HTTPS)" },
     { group: "Dependencies", name: "Anthropic API", type: "http", url: "https://api.anthropic.com",
@@ -72,12 +73,20 @@ async function main(cfg) {
     if (cfg.test) { await emit("testNotification", notif); console.log("test email sent"); }
   }
 
-  // 2. monitors (match by name; create missing only)
+  // 2. monitors (match by name; rename `renamedFrom` in place; create missing only)
   const byName = Object.fromEntries(Object.values(lists.monitorList).map((m) => [m.name, m]));
   const ids = {};
   for (const w of wanted(cfg)) {
-    const { group, ...spec } = w;
+    const { group, renamedFrom, ...spec } = w;
     if (byName[w.name]) { ids[w.name] = byName[w.name].id; console.log("monitor exists: " + w.name); continue; }
+    const old = renamedFrom && byName[renamedFrom];
+    if (old) {
+      try {
+        await emit("editMonitor", { ...old, ...spec });
+        ids[w.name] = old.id; console.log("renamed monitor: " + renamedFrom + " -> " + w.name + " (id " + old.id + ")");
+        continue;
+      } catch (e) { console.log("WARN rename failed (" + e.message + "): creating " + w.name + "; delete '" + renamedFrom + "' by hand"); }
+    }
     const m = { ...monitorDefaults(), ...spec, notificationIDList: notifId ? { [notifId]: true } : {} };
     const r = await emit("add", m);
     ids[w.name] = r.monitorID; console.log("created monitor: " + w.name + " (id " + r.monitorID + ")");

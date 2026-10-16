@@ -34,4 +34,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: shellcheck
-        run: shellcheck --severity=error -e SC2148 scripts/*.sh host/common/*.sh host/app/bootstrap.sh host/ops/bootstrap.sh host/ops/cf-ip-drift.sh
+        run: shellcheck --severity=error -e SC2148 scripts/*.sh host/common/*.sh host/cloud/bootstrap.sh host/ops/bootstrap.sh host/ops/cf-ip-drift.sh

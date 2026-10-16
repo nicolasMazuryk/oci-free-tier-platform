@@ -16,13 +16,13 @@ Everything is Always-Free-eligible. The account is Pay-As-You-Go, so a $1 budget
 flowchart LR
   user([Browser]) --> cf[Cloudflare<br/>DNS / CDN / WAF<br/>*.mazuryktech.com proxied]
   cf -->|"443, Cloudflare ranges only"| nlb[core-nlb<br/>reserved public IP]
-  nlb --> app["core-vm-app 10.0.2.10<br/>A1 2 OCPU / 12 GB<br/>/data 100 GB"]
-  app --> caddy[Caddy core-edge] --> web[project containers<br/>network edge]
-  app --> agents["agent@repo x N"]
+  nlb --> cloud["core-vm-cloud 10.0.2.10<br/>A1 2 OCPU / 12 GB<br/>/data 100 GB"]
+  cloud --> caddy[Caddy core-edge] --> web[project containers<br/>network edge]
+  cloud --> agents["agent@repo x N"]
   agents -. outbound HTTPS .-> anthropic([Anthropic])
   nlb --> ops["core-vm-ops 10.0.2.20<br/>Uptime Kuma :3001"]
-  op([Operator]) -. Tailscale .-> app
-  op -. OCI Bastion, break-glass .-> app
+  op([Operator]) -. Tailscale .-> cloud
+  op -. OCI Bastion, break-glass .-> cloud
 ```
 
 ## Quickstart (operator laptop)
@@ -38,7 +38,7 @@ Prerequisites:
 make help
 make init-foundation init-cloudflare init-core
 make plan-all            # all three layers should say "no changes"
-make ssh VM=app          # shell on the app VM via Bastion (break-glass)
+make ssh VM=cloud          # shell on the cloud VM via Bastion (break-glass)
 ssh agent@cloud          # daily access over Tailscale (see docs/runbooks/access-ssh.md)
 make free-tier           # Always-Free compliance check
 ```
@@ -49,10 +49,10 @@ Starting from an empty tenancy: see [docs/runbooks/00-first-deploy.md](docs/runb
 
 | I want to... | Do |
 |---|---|
-| add a repo to the agent fleet | `make ssh VM=app`, then `fleet add <repo>` and `fleet attach <repo>` (accept trust). See [fleet-repos](docs/runbooks/fleet-repos.md) |
+| add a repo to the agent fleet | `make ssh VM=cloud`, then `fleet add <repo>` and `fleet attach <repo>` (accept trust). See [fleet-repos](docs/runbooks/fleet-repos.md) |
 | deploy a web project | compose with Caddy labels on network `edge`. See [web-projects](docs/runbooks/web-projects.md) |
 | store a secret | `make secret-put NAME=<slug>-secret-<purpose>` (hidden prompt) or `FILE=path` |
-| change host config (Caddy, units, scripts) | edit `host/**`, then `make host-sync VM=app\|ops` |
+| change host config (Caddy, units, scripts) | edit `host/**`, then `make host-sync VM=cloud\|ops` |
 | back up before something risky | `make backup` |
 | rebuild everything except DNS/vault/state | `make wipe`, then `make restore BACKUP=<ocid>`. See [wipe-and-restore](docs/runbooks/wipe-and-restore.md) |
 

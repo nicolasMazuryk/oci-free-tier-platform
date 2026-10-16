@@ -2,14 +2,15 @@
 
 ## Tailscale (daily)
 
-`core-vm-app` is the tailnet node **`cloud`** (`tag:cloud`, MagicDNS `cloud.tail70cd02.ts.net`). From the Mac or iPhone:
+`core-vm-cloud` is the tailnet node **`cloud`** (`tag:cloud`, MagicDNS `cloud.tailnet-example.ts.net`). Its OS hostname and VNIC
+hostname label are `cloud` too. From the Mac or iPhone:
 
 ```bash
 ssh agent@cloud           # Tailscale SSH: tailnet identity, no key (users agent, ubuntu)
 mosh agent@cloud          # mosh over the tailnet (UDP 60000-61000 on tailscale0 only)
 ```
 
-- Installed and joined by app bootstrap (`setup_tailscale`). The auth key comes from Vault `core-secret-tailscale-authkey`.
+- Installed and joined by cloud bootstrap (`setup_tailscale`). The auth key comes from Vault `core-secret-tailscale-authkey`.
   It is only used when the node has no state. State lives on `/data/core/tailscale`.
 - The tailnet policy is in cc-orchestrator (`config/tailscale/policy.hujson`), not here. It allows members → `cloud` and
   has **no** rule from `tag:cloud`, so the VM cannot reach the Mac or iPhone.
@@ -23,9 +24,9 @@ mosh agent@cloud          # mosh over the tailnet (UDP 60000-61000 on tailscale0
 - The key is the dedicated `~/.ssh/oci_core` (RSA 4096). The login user is `ubuntu`.
 
 ```bash
-make ssh VM=app                      # interactive (real terminal)
+make ssh VM=cloud                    # interactive (real terminal)
 make ssh VM=ops CMD='uptime'         # one-off command (works in the no-TTY ! shell too)
-scripts/ssh.sh app sudo -iu agent    # same thing, direct
+scripts/ssh.sh cloud sudo -iu agent  # same thing, direct
 ```
 
 How it works (`scripts/bastion.sh`):
@@ -35,7 +36,7 @@ How it works (`scripts/bastion.sh`):
 3. `make host-sync` uses the same config with rsync.
 
 Firewalling:
-- `core-nsg-app` and `core-nsg-ops` allow 22 only from the Bastion's private endpoint /32.
+- `core-nsg-cloud` and `core-nsg-ops` allow 22 only from the Bastion's private endpoint /32.
 - Session clients are limited by `bastion_client_cidrs`. The default is `0.0.0.0/0`, and the key is still required.
 
 ## Common problems
@@ -51,7 +52,7 @@ Firewalling:
 ## Agent / tmux access
 
 ```bash
-make ssh VM=app
+make ssh VM=cloud
 fleet ls
 fleet attach <repo>        # Ctrl-b d to detach; do not Ctrl-c (that stops the server)
 sudo -iu agent             # agent shell (passwordless sudo, docker)

@@ -3,6 +3,7 @@
 source /opt/core/lib.sh
 exec > >(tee -a /var/log/core-bootstrap.log) 2>&1
 log "=== ops bootstrap start"
+migrate_core_env
 export DEBIAN_FRONTEND=noninteractive
 
 ensure_swap 2G
@@ -11,7 +12,7 @@ apt-get install -y -qq jq curl rsync ca-certificates >/dev/null
 install_oci_cli
 install_docker /var/lib/docker
 
-# Uptime Kuma (status.<domain> via Caddy on core-vm-app)
+# Uptime Kuma (status.<domain> via Caddy on core-vm-cloud)
 # Never expose Kuma's first-run setup page: bind to localhost, finish setup
 # with the admin login from Vault, and only then publish on 0.0.0.0.
 open_port 3001
@@ -55,8 +56,8 @@ kuma_provision() {
   creds="$(secret_get core-secret-uptime-kuma-admin)" || return 1
   smtp="$(secret_get core-secret-smtp 2>/dev/null)" || smtp=null
   docker cp /opt/core/uptime-kuma/kuma-provision.js "$(kuma_ctr)":/tmp/kuma-provision.js >/dev/null
-  jq -n --argjson c "$creds" --argjson s "$smtp" --arg d "$DOMAIN" --arg a "$APP_IP" --arg t "${ALERTS_EMAIL:-}" \
-    '{user:$c.user, password:$c.password, domain:$d, appIp:$a, alertsTo:$t, smtp:(if $t == "" then null else $s end)}' \
+  jq -n --argjson c "$creds" --argjson s "$smtp" --arg d "$DOMAIN" --arg a "$CLOUD_IP" --arg t "${ALERTS_EMAIL:-}" \
+    '{user:$c.user, password:$c.password, domain:$d, cloudIp:$a, alertsTo:$t, smtp:(if $t == "" then null else $s end)}' \
     | docker exec -i "$(kuma_ctr)" node /tmp/kuma-provision.js
 }
 [[ -n "${ALERTS_EMAIL:-}" ]] || log "WARN: ALERTS_EMAIL not in core.env: Kuma email notification skipped"

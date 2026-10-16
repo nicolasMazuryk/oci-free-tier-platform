@@ -11,9 +11,9 @@
 # zone_id       = "<your Cloudflare zone id>"   # required
 
 # --- terraform/core ---
-# app_ad_index          = 0      # 1 or 2 if A1 capacity is exhausted in AD-1 (ops must stay AD-1)
-# app_ocpus             = 2      # A1 total across tenancy must stay <= 4
-# app_memory_gb         = 12     # A1 total must stay <= 24
+# cloud_ad_index        = 0      # 1 or 2 if A1 capacity is exhausted in AD-1 (ops must stay AD-1)
+# cloud_ocpus           = 2      # A1 total across tenancy must stay <= 4
+# cloud_memory_gb       = 12     # A1 total must stay <= 24
 # data_volume_gb        = 100    # boot+block total must stay <= 200
 # data_volume_backup_id = ""     # set by `make restore BACKUP=...`
 # bastion_client_cidrs  = ["0.0.0.0/0"]

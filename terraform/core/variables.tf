@@ -35,20 +35,20 @@ variable "bastion_client_cidrs" {
 }
 
 # ---- compute ----
-variable "app_ad_index" {
-  description = "AD for core-vm-app (0=AD-1). Change if A1 capacity is exhausted. ops must stay in AD-1 (E2.1.Micro)."
+variable "cloud_ad_index" {
+  description = "AD for core-vm-cloud (0=AD-1). Change if A1 capacity is exhausted. ops must stay in AD-1 (E2.1.Micro)."
   type        = number
   default     = 0
 }
-variable "app_ocpus" {
+variable "cloud_ocpus" {
   type    = number
   default = 2
 }
-variable "app_memory_gb" {
+variable "cloud_memory_gb" {
   type    = number
   default = 12
 }
-variable "app_private_ip" {
+variable "cloud_private_ip" {
   type    = string
   default = "10.0.2.10"
 }
@@ -65,7 +65,7 @@ variable "data_volume_gb" {
   default = 100
 }
 variable "data_volume_backup_id" {
-  description = "Restore: create core-bv-app-data from this volume backup OCID instead of empty."
+  description = "Restore: create core-bv-cloud-data from this volume backup OCID instead of empty."
   type        = string
   default     = ""
 }

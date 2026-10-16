@@ -4,14 +4,14 @@ locals {
   host_root = "${path.module}/../../host"
 
   host_files = {
-    for role in ["app", "ops"] : role => merge(
+    for role in ["cloud", "ops"] : role => merge(
       { for f in fileset("${local.host_root}/common", "**") : f => "${local.host_root}/common/${f}" },
       { for f in fileset("${local.host_root}/${role}", "**") : f => "${local.host_root}/${role}/${f}" },
     )
   }
 
   core_env = {
-    for role in ["app", "ops"] : role => join("\n", [for k, v in {
+    for role in ["cloud", "ops"] : role => join("\n", [for k, v in {
       ROLE                    = role
       DOMAIN                  = local.domain
       REGION                  = var.region
@@ -20,17 +20,17 @@ locals {
       VAULT_ID                = local.f.vault_id
       TOPIC_ID                = local.f.alerts_topic_id
       ALERTS_EMAIL            = local.f.alerts_email
-      APP_IP                  = var.app_private_ip
+      CLOUD_IP                = var.cloud_private_ip
       OPS_IP                  = var.ops_private_ip
       GIT_USER_NAME           = var.git_user_name
       GIT_USER_EMAIL          = var.git_user_email
       NODE_MAJOR              = "24"
-      DISK_METRIC_MOUNTS      = role == "app" ? "/ /data" : "/"
+      DISK_METRIC_MOUNTS      = role == "cloud" ? "/ /data" : "/"
     } : "${k}=\"${v}\""])
   }
 
   cloud_init = {
-    for role in ["app", "ops"] : role => "#cloud-config\n${yamlencode({
+    for role in ["cloud", "ops"] : role => "#cloud-config\n${yamlencode({
       write_files = concat(
         [for dst, src in local.host_files[role] : {
           path        = "/opt/core/${dst}"

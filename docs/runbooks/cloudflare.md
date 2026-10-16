@@ -29,7 +29,7 @@ Notes:
 |---|---|
 | Change a record or setting | edit `terraform/cloudflare/*.tf`, then `make plan-cloudflare apply-cloudflare` |
 | Add a manual record (e.g. a verification TXT) | prefer adding it to `dns.tf`. Records made by hand in the dashboard are not removed by Terraform, but they are not tracked either |
-| Rotate the Origin cert | `make apply-cloudflare ARGS='-replace=tls_private_key.origin'`, then `make host-sync VM=app` |
+| Rotate the Origin cert | `make apply-cloudflare ARGS='-replace=tls_private_key.origin'`, then `make host-sync VM=cloud` |
 | Rotate the API token | roll it in the dashboard, then `make secret-put NAME=core-secret-cf-api-token` |
 | Cloudflare IP ranges changed | the weekly drift cron emails you. Fix with `make plan-core apply-core` (the NSGs are built from the live list). Check with `make drift` |
 | Another domain | add the zone, proxy it to the same IP, add an Origin cert and a Caddy `tls` snippet. See [web-projects](web-projects.md) |

@@ -38,12 +38,12 @@ resource "oci_core_network_security_group_security_rule" "nlb_in_cf" {
   }
 }
 
-resource "oci_core_network_security_group_security_rule" "nlb_out_app" {
+resource "oci_core_network_security_group_security_rule" "nlb_out_cloud" {
   network_security_group_id = oci_core_network_security_group.nlb.id
   direction                 = "EGRESS"
   protocol                  = "6"
   destination_type          = "NETWORK_SECURITY_GROUP"
-  destination               = oci_core_network_security_group.app.id
+  destination               = oci_core_network_security_group.cloud.id
   tcp_options {
     destination_port_range {
       min = 443
@@ -52,17 +52,17 @@ resource "oci_core_network_security_group_security_rule" "nlb_out_app" {
   }
 }
 
-# ---- app VM ----
-resource "oci_core_network_security_group" "app" {
+# ---- cloud VM ----
+resource "oci_core_network_security_group" "cloud" {
   compartment_id = local.compartment
   vcn_id         = oci_core_vcn.core.id
-  display_name   = "core-nsg-app"
+  display_name   = "core-nsg-cloud"
   freeform_tags  = local.tags
 }
 
-resource "oci_core_network_security_group_security_rule" "app_in_cf" {
+resource "oci_core_network_security_group_security_rule" "cloud_in_cf" {
   for_each                  = toset(local.cf_ipv4)
-  network_security_group_id = oci_core_network_security_group.app.id
+  network_security_group_id = oci_core_network_security_group.cloud.id
   direction                 = "INGRESS"
   protocol                  = "6"
   source_type               = "CIDR_BLOCK"
@@ -76,8 +76,8 @@ resource "oci_core_network_security_group_security_rule" "app_in_cf" {
   }
 }
 
-resource "oci_core_network_security_group_security_rule" "app_in_nlb_hc" {
-  network_security_group_id = oci_core_network_security_group.app.id
+resource "oci_core_network_security_group_security_rule" "cloud_in_nlb_hc" {
+  network_security_group_id = oci_core_network_security_group.cloud.id
   direction                 = "INGRESS"
   protocol                  = "6"
   source_type               = "NETWORK_SECURITY_GROUP"
@@ -91,8 +91,8 @@ resource "oci_core_network_security_group_security_rule" "app_in_nlb_hc" {
   }
 }
 
-resource "oci_core_network_security_group_security_rule" "app_in_ops_probe" {
-  network_security_group_id = oci_core_network_security_group.app.id
+resource "oci_core_network_security_group_security_rule" "cloud_in_ops_probe" {
+  network_security_group_id = oci_core_network_security_group.cloud.id
   direction                 = "INGRESS"
   protocol                  = "6"
   source_type               = "NETWORK_SECURITY_GROUP"
@@ -106,8 +106,8 @@ resource "oci_core_network_security_group_security_rule" "app_in_ops_probe" {
   }
 }
 
-resource "oci_core_network_security_group_security_rule" "app_in_ssh" {
-  network_security_group_id = oci_core_network_security_group.app.id
+resource "oci_core_network_security_group_security_rule" "cloud_in_ssh" {
+  network_security_group_id = oci_core_network_security_group.cloud.id
   direction                 = "INGRESS"
   protocol                  = "6"
   source_type               = "CIDR_BLOCK"
@@ -121,8 +121,8 @@ resource "oci_core_network_security_group_security_rule" "app_in_ssh" {
   }
 }
 
-resource "oci_core_network_security_group_security_rule" "app_out_all" {
-  network_security_group_id = oci_core_network_security_group.app.id
+resource "oci_core_network_security_group_security_rule" "cloud_out_all" {
+  network_security_group_id = oci_core_network_security_group.cloud.id
   direction                 = "EGRESS"
   protocol                  = "all"
   destination_type          = "CIDR_BLOCK"
@@ -142,8 +142,8 @@ resource "oci_core_network_security_group_security_rule" "ops_in_kuma" {
   direction                 = "INGRESS"
   protocol                  = "6"
   source_type               = "NETWORK_SECURITY_GROUP"
-  source                    = oci_core_network_security_group.app.id
-  description               = "uptime kuma from app (caddy)"
+  source                    = oci_core_network_security_group.cloud.id
+  description               = "uptime kuma from cloud (caddy)"
   tcp_options {
     destination_port_range {
       min = 3001

@@ -40,7 +40,7 @@ networks:
 
 1. Create the secrets. They go to compartment `projects`:
    `make secret-put NAME=acme-secret-db-url` (or `FILE=...`)
-2. Clone and render the env file on app (as `agent`). Run `secret_get` in a **root** shell, because `/opt/core/lib.sh` uses the instance principal:
+2. Clone and render the env file on cloud (as `agent`). Run `secret_get` in a **root** shell, because `/opt/core/lib.sh` uses the instance principal:
    ```bash
    git clone https://github.com/nicolasMazuryk/acme.git /data/projects/acme && cd /data/projects/acme
    sudo bash -c 'source /opt/core/lib.sh; echo "DATABASE_URL=$(secret_get acme-secret-db-url)"' > .env && chmod 600 .env
@@ -78,4 +78,4 @@ Then delete the OCI resources tagged `project=acme`, and schedule deletion of th
 - **Another domain:**
   1. Add the zone to Cloudflare and proxy it to `203.0.113.10`.
   2. Issue an Origin CA cert for it (extend `terraform/cloudflare`).
-  3. Store it in Vault, and add a `tls` snippet for it in `host/app/edge/Caddyfile.tmpl`.
+  3. Store it in Vault, and add a `tls` snippet for it in `host/cloud/edge/Caddyfile.tmpl`.

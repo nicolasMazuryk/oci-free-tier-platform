@@ -10,7 +10,7 @@ infrastructure in `uk-london-1`. It serves two purposes:
    the `agent` user (+ linger, sudo, gh auth), Tailscale (node `cloud`, `tag:cloud`), the mosh firewall rule, Vault
    secrets and log shipping. **Never add Claude Code install/config/units here**; the bootstrap only removes the legacy
    `agent@`/`fleet` setup older versions installed and never touches `cc-*` units.
-   Rebuild path: `make restore`/`make host-sync VM=cloud` here → `./install.sh cloud` in cc-orchestrator (from the Mac).
+   Rebuild path: `make restore`/`make host-sync VM=cloud` here → `./install.sh cloud` in claude-code-fleet (from the Mac).
 2. **Web hosting**: `*.mazuryktech.com` through Cloudflare, served by Caddy on `core-vm-cloud`.
 
 The original spec is `prompt.md`. Human docs are in `README.md`, `docs/architecture.md` and `docs/runbooks/`.
@@ -113,7 +113,7 @@ Hostnames are one level only: `<slug>.mazuryktech.com` or `<slug>-<svc>.mazurykt
 `api.acme.mazuryktech.com` is **not** covered by the certificate.
 
 On the VM:
-- Claude Code units are cc-orchestrator's: `cc-rc@<repo>`, `cc-agents` (tmux session `fleet`). The legacy `agent@<repo>` / tmux socket `agent-<repo>` are gone.
+- Claude Code units are claude-code-fleet's: `cc-rc@<repo>`, `cc-agents` (tmux session `fleet`). The legacy `agent@<repo>` / tmux socket `agent-<repo>` are gone.
 - the compose project is `<slug>`
 
 ## Real values (current deployment)
@@ -142,8 +142,8 @@ Use `make output-<layer>` for OCIDs. Don't hard-code new OCIDs into code.
 | `core-secret-smtp` | foundation | JSON `{host,port,username,password,from}`; also the Kuma `core-email` notification |
 | `core-secret-apm-public-key` / `-private-key` | foundation | OTLP to `core-apm` |
 | `core-secret-uptime-kuma-admin` | foundation (random) | ops bootstrap (Kuma first-run setup); human login |
-| `core-secret-tailscale-authkey` | human (`secret-put`) | cloud bootstrap: `tailscale up --auth-key=file:…` (reusable, tagged `tag:cloud`; only needed when the node has no state; skipped if absent) |
-| `core-secret-ntfy-topic` | human (`secret-put`) | cc-orchestrator `install.sh` (push topic recovery on rebuild); not read by bootstrap |
+| `core-secret-tailscale-authkey` | human (`secret-put`) | cloud bootstrap: `tailscale up --auth-key=file:…`. Holds a Tailscale **OAuth client secret** (`tskey-client-…`, scope *Auth Keys: Write*, tag `tag:cloud`; does not expire; see `secrets-rotation.md`). Only needed when the node has no state; skipped if absent |
+| `core-secret-ntfy-topic` | human (`secret-put`) | claude-code-fleet `install.sh` (push topic recovery on rebuild); not read by bootstrap |
 
 Project secrets are `<slug>-secret-*`. `secret-put` puts them in compartment `projects`.
 
@@ -172,8 +172,8 @@ The budget `core-budget-monthly` ($1, alerts at 50%/100%, plus a 100% forecast a
   The admin login, the `core-email` SMTP notification, the standard monitors and the public status page `core` are all
   **recreated by ops bootstrap** (`host/ops/uptime-kuma/kuma-provision.js`), so only heartbeat history and hand-made monitors are lost.
 - The Custom Logs plugin is NOT_SUPPORTED on the ops E2.1.Micro (Ubuntu x86). Only cloud logs reach `core-log-cloud`.
-- Claude Code logs: cc-orchestrator's rsyslog rule writes `cc-rc@*` output and unit events to `/var/log/core/agent.log`, shipped by the unified agent. The Terraform log and alarm strings name `cc-rc@`/`cc-agents` (applied with `make apply-core`).
-- `main` has no commits yet. Work lives on `feat/core-infra`, which is the GitHub default branch until a human sets up `main`.
+- Claude Code logs: claude-code-fleet's rsyslog rule writes `cc-rc@*` output and unit events to `/var/log/core/agent.log`, shipped by the unified agent. The Terraform log and alarm strings name `cc-rc@`/`cc-agents` (applied with `make apply-core`).
+- Work on a branch, PR into `main`.
 
 ## Where things live on the VMs
 

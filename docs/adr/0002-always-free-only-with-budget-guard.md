@@ -16,5 +16,5 @@ The platform is meant to run at no cost. The tenancy is Pay-As-You-Go, which bil
 ## Consequences
 
 - A mistake is caught by the check before it is applied, or by the budget alert, instead of on the invoice.
-- Capacity is tight. If A1 capacity is exhausted in AD-1, `app_ad_index` moves the app VM to another AD, but the micro VM must stay in AD-1.
+- Capacity is tight. If A1 capacity is exhausted in AD-1, `cloud_ad_index` moves the cloud VM to another AD, but the micro VM must stay in AD-1.
 - Features that are not free (a larger volume, extra A1 capacity, a virtual private vault) are out of scope by design.

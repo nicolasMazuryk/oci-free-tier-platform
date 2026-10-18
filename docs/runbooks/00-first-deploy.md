@@ -85,12 +85,12 @@ These steps need a **real terminal**.
    - Contents RW, Pull requests RW, Issues RW, Workflows RW, Metadata R
    - Store it: `make secret-put NAME=core-secret-github-pat` (or use the pbpaste variant above)
    - Then run `make host-sync VM=cloud`. Bootstrap runs `gh auth login --with-token`, `gh auth setup-git` and `git_protocol https` for `agent`.
-2. **Claude Code:** from the Mac, follow cc-orchestrator `docs/runbooks/cloud-rebuild.md` (after Tailscale, step 5
+2. **Claude Code:** from the Mac, follow claude-code-fleet `docs/runbooks/cloud-rebuild.md` (after Tailscale, step 5
    below): `./install.sh cloud` installs the Claude Code binary, settings, Agent View and the `cc-rc@<repo>` units,
    then the one-time `claude auth login`, Remote Control acceptance and workspace trust per repo.
-3. (removed: repos and Remote Control servers are cc-orchestrator's `config/cloud/repos.txt` + `repo-init`.)
-4. **Push notifications** go through cc-orchestrator's ntfy hook, not the Claude app (its notifications are off).
-5. **Tailscale (node `cloud`):** follow cc-orchestrator `docs/runbooks/tailscale.md`. In order:
+3. (removed: repos and Remote Control servers are claude-code-fleet's `config/cloud/repos.txt` + `repo-init`.)
+4. **Push notifications** go through claude-code-fleet's ntfy hook, not the Claude app (its notifications are off).
+5. **Tailscale (node `cloud`):** follow claude-code-fleet `docs/runbooks/tailscale.md`. In order:
    - apply its tailnet policy (it defines `tag:cloud`)
    - generate a reusable, tagged auth key
    - `make secret-put NAME=core-secret-tailscale-authkey`

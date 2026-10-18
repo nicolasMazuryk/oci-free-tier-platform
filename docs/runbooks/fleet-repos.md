@@ -1,9 +1,9 @@
-# Agent fleet: repos and sessions → cc-orchestrator
+# Agent fleet: repos and sessions → claude-code-fleet
 
 **Claude Code on `core-vm-cloud` is owned by [claude-code-fleet](https://github.com/nicolasMazuryk/claude-code-fleet)**
 (`~/Documents/claude-code-fleet`, ADR 0002). This repo no longer installs Claude Code, `agent@<repo>` or `fleet`.
 
-| What | Where (cc-orchestrator) |
+| What | Where (claude-code-fleet) |
 |---|---|
 | Install / rebuild Claude Code on cloud (binary, settings, units) | `./install.sh cloud` from the Mac; `docs/runbooks/cloud-rebuild.md` |
 | Repos with a Remote Control server (`cloud/<repo>` in the Claude app) | `config/cloud/repos.txt`; units `cc-rc@<repo>` |
@@ -19,12 +19,12 @@ volume, the `agent` user (passwordless sudo, docker group, linger), Node 24 + pn
 
 Old command → new:
 
-| oci `fleet` (removed) | cc-orchestrator |
+| oci `fleet` (removed) | claude-code-fleet |
 |---|---|
 | `fleet add <repo>` | add to `config/cloud/repos.txt`, `./install.sh cloud` (clones it), then trust once: `ssh -t cloud 'repo-init <repo>'` |
 | `fleet attach <repo>` | `ac` (Agent View); Remote Control servers run headless under systemd |
 | `fleet ls` / `logs` / `restart` | `fleet` / `fleet logs cloud <repo>` / `fleet restart cloud <repo>` on the Mac |
-| `fleet rm <repo>` | cc-orchestrator `docs/runbooks/remove-repo.md` |
+| `fleet rm <repo>` | claude-code-fleet `docs/runbooks/remove-repo.md` |
 
 `make host-sync VM=cloud` removes any leftover `agent@*` units, `agent@.service`, `/usr/local/bin/fleet` and their
 tmux servers (bootstrap step 5), and never touches `cc-*` units.

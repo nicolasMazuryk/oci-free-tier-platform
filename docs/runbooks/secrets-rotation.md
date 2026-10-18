@@ -39,8 +39,8 @@ How `secret-put` handles the value:
 | `core-secret-apm-*-key` | Rotate the data key in the APM console, then `make apply-foundation` (the secret is rebuilt from the data source) | Redeploy the instrumented apps |
 | `core-secret-uptime-kuma-admin` | `make apply-foundation ARGS='-replace=random_password.kuma_admin'` (Terraform owns this secret: do not `secret-put` it) | Read the new value from Vault and set it in Kuma (Settings, then Security, then Change Password). Bootstrap only uses it for first-run setup. |
 | `<slug>-secret-*` | `secret-put` | Re-render the project's `.env` and run `docker compose up -d` |
-| `core-secret-tailscale-authkey` | **Not rotated.** It holds a Tailscale **OAuth client secret** (`tskey-client-…`, scope *Auth Keys: Write*, tag `tag:cloud`), which does not expire. Replace it only if it leaks or the OAuth client is deleted: admin console → Settings → Trust credentials → OAuth → generate a new client (same scope and tag) → `secret-put` → delete the old client. Details: cc-orchestrator `docs/runbooks/tailscale.md` §2 | Nothing: a joined node keeps working without it. It is only read when the node has no state (first deploy, `make restore BACKUP=none`) |
-| `core-secret-ntfy-topic` | cc-orchestrator `docs/runbooks/rotate-secrets.md` | cc-orchestrator `./install.sh cloud` |
+| `core-secret-tailscale-authkey` | **Not rotated.** It holds a Tailscale **OAuth client secret** (`tskey-client-…`, scope *Auth Keys: Write*, tag `tag:cloud`), which does not expire. Replace it only if it leaks or the OAuth client is deleted: admin console → Settings → Trust credentials → OAuth → generate a new client (same scope and tag) → `secret-put` → delete the old client. Details: claude-code-fleet `docs/runbooks/tailscale.md` §2 | Nothing: a joined node keeps working without it. It is only read when the node has no state (first deploy, `make restore BACKUP=none`) |
+| `core-secret-ntfy-topic` | claude-code-fleet `docs/runbooks/rotate-secrets.md` | claude-code-fleet `./install.sh cloud` |
 
 ## Delete
 

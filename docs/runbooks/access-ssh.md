@@ -12,10 +12,10 @@ mosh agent@cloud          # mosh over the tailnet (UDP 60000-61000 on tailscale0
 
 - Installed and joined by cloud bootstrap (`setup_tailscale`). The auth key comes from Vault `core-secret-tailscale-authkey`.
   It is only used when the node has no state. State lives on `/data/core/tailscale`.
-- The tailnet policy is in cc-orchestrator (`config/tailscale/policy.hujson`), not here. It allows members → `cloud` and
+- The tailnet policy is in claude-code-fleet (`config/tailscale/policy.hujson`), not here. It allows members → `cloud` and
   has **no** rule from `tag:cloud`, so the VM cannot reach the Mac or iPhone.
 - On the VM: `tailscale status`, `sudo iptables -S INPUT | grep 60000`, `systemctl status tailscaled`.
-- Claude Code on this VM (Agent View, Remote Control servers, settings) is documented in cc-orchestrator.
+- Claude Code on this VM (Agent View, Remote Control servers, settings) is documented in claude-code-fleet.
 
 ## Bastion (break-glass)
 
@@ -55,5 +55,5 @@ Firewalling:
 ssh agent@cloud            # daily (Tailscale); `make ssh VM=cloud` then `sudo -iu agent` as break-glass
 ```
 
-Agent View, the Remote Control servers (`cc-rc@<repo>`) and `fleet` (on the Mac) are cc-orchestrator's: its
+Agent View, the Remote Control servers (`cc-rc@<repo>`) and `fleet` (on the Mac) are claude-code-fleet's: its
 `docs/runbooks/` (`ac` attaches to Agent View in tmux session `fleet`; `fleet logs|restart cloud <repo>`).

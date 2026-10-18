@@ -8,7 +8,7 @@ This tenancy is **Pay-As-You-Go**. Anything beyond Always-Free is billed immedia
 
 | Resource | Always-Free | Used | Headroom |
 |---|---|---|---|
-| A1 Flex | 4 OCPU / 24 GB (3000 OCPU-h + 18000 GB-h per month) | app 2 / 12 | 2 OCPU / 12 GB |
+| A1 Flex | 4 OCPU / 24 GB (3000 OCPU-h + 18000 GB-h per month) | cloud 2 / 12 | 2 OCPU / 12 GB |
 | E2.1.Micro | 2 instances (AD-1 only in London) | ops | 1 |
 | Boot + block volume | 200 GB total | 50 + 50 + 100 = **200** | **0**. Growing anything means shrinking something else. |
 | Volume performance | Balanced (10 VPU/GB) | 10 | n/a (higher VPU is billed) |

@@ -123,7 +123,7 @@ On the VM:
 | Reserved public IP (DNS target) | `203.0.113.10` (`core-pip-nlb`) |
 | core-vm-cloud | A1.Flex 2 OCPU / 12 GB, AD-1, `10.0.2.10`, boot 50 GB + `core-bv-cloud-data` 100 GB at `/data`; OS hostname `cloud` |
 | core-vm-ops | E2.1.Micro, AD-1 (the only AD that has it), `10.0.2.20`, boot 50 GB |
-| Bastion | `core-bastion`, private endpoint `10.0.2.183` |
+| Bastion | `core-bastion`, private endpoint `10.0.2.6` (assigned by OCI, changes on a core rebuild: `make output-core ARGS='-raw bastion_private_ip'`) |
 | Vault | `core-vault` (DEFAULT/shared), key `core-key-main` (SOFTWARE) |
 | Cloudflare zone | `mazuryktech.com`, id supplied via the `zone_id` variable, Free plan, SSL strict |
 | SMTP | `smtp.email.uk-london-1.oci.oraclecloud.com:587`, sender `noreply@mazuryktech.com` |

@@ -27,7 +27,7 @@ State locking is native to the oci backend. The bucket is versioned, and previou
 |---|---|
 | `core-vcn` | 10.0.0.0/16, DNS label `core` |
 | `core-snet-pub` | 10.0.1.0/24, route `core-rt-pub` (0/0 via `core-igw`); contains only `core-nlb` (10.0.1.138) |
-| `core-snet-priv` | 10.0.2.0/24, no public IPs, route `core-rt-priv` (0/0 via `core-natgw`, OSN via `core-sgw`); cloud 10.0.2.10, ops 10.0.2.20, Bastion endpoint 10.0.2.183 |
+| `core-snet-priv` | 10.0.2.0/24, no public IPs, route `core-rt-priv` (0/0 via `core-natgw`, OSN via `core-sgw`); cloud 10.0.2.10, ops 10.0.2.20, Bastion endpoint 10.0.2.6 (OCI-assigned; `bastion_private_ip` output) |
 | `core-sl-base` | security list on both subnets: egress all and ICMP type 3. **All ingress is in NSGs.** |
 
 NSGs:

@@ -97,7 +97,7 @@ chown agent:agent /data/fleet /data/projects
 loginctl enable-linger agent >/dev/null 2>&1 || true
 
 as_agent() { sudo -iu agent bash -lc "$1"; }
-# Claude Code itself (binary, settings, PATH, units) is installed by cc-orchestrator `./install.sh cloud`, not here.
+# Claude Code itself (binary, settings, PATH, units) is installed by claude-code-fleet `./install.sh cloud`, not here.
 as_agent "git config --global user.name '${GIT_USER_NAME}' && git config --global user.email '${GIT_USER_EMAIL}' && git config --global init.defaultBranch main"
 
 # GitHub: fine-grained PAT from Vault, HTTPS only (skipped until the secret exists)
@@ -111,7 +111,7 @@ else
 fi
 
 # ---- 4b. tailnet access: Tailscale node `cloud` (tag:cloud) + mosh ------------
-# Daily access from the Mac / iPhone is Tailscale SSH and mosh (cc-orchestrator ADR 0001); Bastion stays
+# Daily access from the Mac / iPhone is Tailscale SSH and mosh (claude-code-fleet ADR 0001); Bastion stays
 # as break-glass. Tailscale is outbound-only: no public IP, no new ingress. Node state lives on /data, so a
 # restore from backup rejoins as the same node (same name and 100.x IP). Never fatal: a tailnet problem
 # must not stop the rest of the bootstrap.
@@ -169,8 +169,8 @@ setup_tailscale || log "WARN: Tailscale setup failed (Bastion still works; fix, 
 # mosh over the tailnet only (UDP 60000-61000 on tailscale0), before the image's REJECT, persisted
 allow_udp_on_iface tailscale0 60000:61000
 
-# ---- 5. Claude Code: owned by cc-orchestrator ---------------------------------
-# cc-orchestrator (github.com/nicolasMazuryk/cc-orchestrator, ADR 0002) installs the Claude Code binary, settings,
+# ---- 5. Claude Code: owned by claude-code-fleet ---------------------------------
+# claude-code-fleet (github.com/nicolasMazuryk/claude-code-fleet, ADR 0002) installs the Claude Code binary, settings,
 # Agent View (cc-agents.service) and the Remote Control units (cc-rc@<repo>.service) with `./install.sh cloud`.
 # This bootstrap never touches cc-* units. It only removes what older versions of it installed (idempotent; a
 # no-op once clean). Stopping agent@<repo> first keeps one Remote Control server per folder.
@@ -221,7 +221,7 @@ fi
 docker compose -f /data/core/edge/compose.yaml restart caddy >/dev/null
 
 # ---- 7. logs + metrics ---------------------------------------------------------
-# /var/log/core/agent.log is tailed by the unified agent into core-log-cloud. cc-orchestrator's rsyslog rule
+# /var/log/core/agent.log is tailed by the unified agent into core-log-cloud. claude-code-fleet's rsyslog rule
 # (/etc/rsyslog.d/30-cc-orchestrator.conf) writes the cc-rc@<repo>/cc-agents output and unit events into it.
 mkdir -p /var/log/core && touch /var/log/core/agent.log && chown syslog:adm /var/log/core/agent.log && chmod 640 /var/log/core/agent.log
 cat > /etc/logrotate.d/core <<'ROT'

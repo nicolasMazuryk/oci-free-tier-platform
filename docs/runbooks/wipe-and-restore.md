@@ -39,7 +39,7 @@ What happens:
 - `terraform apply` runs with `-var data_volume_backup_id=<ocid>`. The new `core-bv-cloud-data` is created from the backup.
   `ignore_changes = [source_details]` means later plans without the var stay clean.
 - Cached Bastion sessions and `~/.ssh/known_hosts_oci_core` are cleared, because the new VMs have new host keys.
-- On first boot, cloud bootstrap sees the existing ext4 `data` filesystem and **does not mkfs it**. It recreates `agent` with the original uid/gid and brings Caddy up. The Claude Code units (`cc-rc@<repo>`, `cc-agents`) are under `/etc` on the boot volume, so they come back from cc-orchestrator: run `./install.sh cloud` from the Mac (step below).
+- On first boot, cloud bootstrap sees the existing ext4 `data` filesystem and **does not mkfs it**. It recreates `agent` with the original uid/gid and brings Caddy up. The Claude Code units (`cc-rc@<repo>`, `cc-agents`) are under `/etc` on the boot volume, so they come back from claude-code-fleet: run `./install.sh cloud` from the Mac (step below).
 - Tailscale: the node state is on `/data/core/tailscale`, so a restore from backup rejoins as the same node `cloud`
   (same 100.x IP, no auth key needed). With `BACKUP=none` there is no state: **first delete the old `cloud` machine in
   the Tailscale admin console** (or the new node becomes `cloud-1`), and make sure `core-secret-tailscale-authkey` holds
@@ -85,7 +85,7 @@ The drill verified all of this with no manual steps:
 
 Two bugs were found and fixed during the drill:
 1. **Docker 29 containerd image store.** By default, image layers and container snapshots live in `/var/lib/containerd` on the *boot* volume, so the restored `/data/docker` had container metadata without layers. Caddy failed with `RWLayer of container ... is unexpectedly nil`.
-   - **Fix:** app's `daemon.json` now sets `"features": {"containerd-snapshotter": false}`, so everything (overlay2) is under `/data/docker` and is backed up.
+   - **Fix:** cloud's `daemon.json` now sets `"features": {"containerd-snapshotter": false}`, so everything (overlay2) is under `/data/docker` and is backed up.
    - **Fix:** bootstrap also recreates `core-edge` if it fails to start.
 2. **`core-alarm-metrics-absent`** fired after the restore, because the destroyed instances' metric streams (old `resourceId`) stayed absent. It is now grouped by the stable `host` dimension (`.groupBy(host).absent()`).
 

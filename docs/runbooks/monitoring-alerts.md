@@ -25,7 +25,7 @@ Notes:
 ## Custom metric
 
 `core-disk-metric.timer` runs every 5 min on both VMs. It posts `core_custom/disk_used_pct` with dimensions `resourceId`, `host`, `mount`:
-- app: `/` and `/data`
+- cloud: `/` and `/data`
 - ops: `/`
 
 It uses the instance principal and the `use metrics` policy.
@@ -37,7 +37,7 @@ The unified agent config `core-uac-cloud` (cloud only; the plugin is unsupported
 | Source | File |
 |---|---|
 | Docker containers | `/data/docker/containers/*/*-json.log` (JSON; `time` parsed) |
-| cc-rc@* output, cc-rc@*/cc-agents unit events | `/var/log/core/agent.log` (rsyslog rule `/etc/rsyslog.d/30-cc-orchestrator.conf`, installed by cc-orchestrator) |
+| cc-rc@* output, cc-rc@*/cc-agents unit events | `/var/log/core/agent.log` (rsyslog rule `/etc/rsyslog.d/30-cc-orchestrator.conf`, installed by claude-code-fleet) |
 | Bootstrap runs | `/var/log/core-bootstrap.log` |
 
 - The agent flushes every 180 s. A new config can take up to about 10 minutes to reach the host.

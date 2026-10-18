@@ -27,7 +27,7 @@ State locking is native to the oci backend. The bucket is versioned, and previou
 |---|---|
 | `core-vcn` | 10.0.0.0/16, DNS label `core` |
 | `core-snet-pub` | 10.0.1.0/24, route `core-rt-pub` (0/0 via `core-igw`); contains only `core-nlb` (10.0.1.138) |
-| `core-snet-priv` | 10.0.2.0/24, no public IPs, route `core-rt-priv` (0/0 via `core-natgw`, OSN via `core-sgw`); app 10.0.2.10, ops 10.0.2.20, Bastion endpoint 10.0.2.183 |
+| `core-snet-priv` | 10.0.2.0/24, no public IPs, route `core-rt-priv` (0/0 via `core-natgw`, OSN via `core-sgw`); cloud 10.0.2.10, ops 10.0.2.20, Bastion endpoint 10.0.2.183 |
 | `core-sl-base` | security list on both subnets: egress all and ICMP type 3. **All ingress is in NSGs.** |
 
 NSGs:
@@ -38,7 +38,7 @@ NSGs:
 | `core-nsg-cloud` | TCP 443 from Cloudflare ranges (the NLB preserves the source IP); TCP 443 from `core-nsg-nlb` (health checks); TCP 443 from `core-nsg-ops` (Kuma origin probe); TCP 22 from the Bastion endpoint /32 |
 | `core-nsg-ops` | TCP 3001 from `core-nsg-cloud` (Caddy proxies status.*); TCP 22 from the Bastion endpoint /32 |
 
-Host firewall: Oracle's Ubuntu image ends `INPUT` with REJECT. Bootstrap inserts ACCEPT rules for 443 (app) and 3001 (ops), both live and in `/etc/iptables/rules.v4`.
+Host firewall: Oracle's Ubuntu image ends `INPUT` with REJECT. Bootstrap inserts ACCEPT rules for 443 (cloud) and 3001 (ops), both live and in `/etc/iptables/rules.v4`.
 
 ### Request path (web)
 
@@ -66,7 +66,7 @@ iPhone Claude app / claude.ai/code <-> Anthropic relay <- outbound HTTPS (NAT) <
 No inbound ports are involved. Each allowlisted repo is one systemd `cc-rc@<repo>` running
 `claude remote-control --spawn worktree` (no tmux), plus Agent View in tmux session `fleet` (`cc-agents.service`).
 Each session started from the phone gets its own worktree under `/data/fleet/<repo>`.
-**All of this is installed and owned by [cc-orchestrator](https://github.com/nicolasMazuryk/cc-orchestrator)** (`./install.sh cloud`, its ADR 0002). This repo provides the
+**All of this is installed and owned by [claude-code-fleet](https://github.com/nicolasMazuryk/claude-code-fleet)** (`./install.sh cloud`, its ADR 0002). This repo provides the
 machine underneath; its bootstrap never touches `cc-*` units and only removes the legacy `agent@`/`fleet` setup that
 earlier versions of it installed.
 
@@ -78,7 +78,7 @@ Mac / iPhone --Tailscale (WireGuard, outbound from both ends, DERP or direct)-->
 
 - Tailscale SSH (users `agent`, `ubuntu`) and mosh (UDP 60000–61000, allowed on `tailscale0` only) are the daily path.
   Bastion is break-glass. No NSG rule, public IP or open port is involved.
-- The tailnet policy (owned by cc-orchestrator, `config/tailscale/policy.hujson`) has no rule with `src: tag:cloud`:
+- The tailnet policy (owned by claude-code-fleet, `config/tailscale/policy.hujson`) has no rule with `src: tag:cloud`:
   the VM cannot open connections to the Mac or iPhone.
 - Node state is on `/data/core/tailscale`, so it survives a wipe/restore from backup.
 
@@ -124,13 +124,13 @@ Instance options:
 3. Installs the OCI CLI (venv at `/opt/oci-cli`) and Node 24 + pnpm.
 4. Installs Docker with data-root `/data/docker`, with the containerd image store **disabled** (overlay2, so layers live on `/data` and survive a restore), and creates the `edge` network.
 5. Creates the `agent` user, or recreates it with the same uid/gid if `/data/home/agent` already exists (the restore case). The user gets passwordless sudo and is in the docker group.
-6. Sets the agent's git identity (Claude Code itself comes from cc-orchestrator `./install.sh cloud`).
+6. Sets the agent's git identity (Claude Code itself comes from claude-code-fleet `./install.sh cloud`).
 7. Logs in to gh from `core-secret-github-pat`, if that secret exists.
 8. Installs Tailscale (state on `/data/core/tailscale`), joins as `cloud` / `tag:cloud` from `core-secret-tailscale-authkey`
    (only when the node has no state yet), and allows mosh on `tailscale0`.
-9. Removes the legacy Claude Code setup older bootstraps installed (`agent@*` units, `agent@.service`, `fleet`, their tmux servers and rsyslog rule). Idempotent; never touches cc-orchestrator's `cc-*` units.
+9. Removes the legacy Claude Code setup older bootstraps installed (`agent@*` units, `agent@.service`, `fleet`, their tmux servers and rsyslog rule). Idempotent; never touches claude-code-fleet's `cc-*` units.
 10. Installs the Origin cert from Vault, renders the Caddyfile, and brings up `core-edge`.
-11. Creates `/var/log/core/agent.log` (written by cc-orchestrator's rsyslog rule), logrotate, and the disk-metric timer.
+11. Creates `/var/log/core/agent.log` (written by claude-code-fleet's rsyslog rule), logrotate, and the disk-metric timer.
 
 `host/ops/bootstrap.sh`:
 1. Sets up swap and installs the OCI CLI and Docker.
@@ -164,7 +164,7 @@ Instance options:
 | CPU / memory | `oci_computeagent` metrics, which feed `core-alarm-cloud-cpu` (>90% for 15 min) and `core-alarm-cloud-mem` (>90% for 10 min) |
 | Disk usage | custom metric `core_custom/disk_used_pct{host,mount}`, posted every 5 min by `core-disk-metric.timer` on both VMs. It feeds `core-alarm-cloud-disk` (>85%) and `core-alarm-metrics-absent` (nothing for 15 min) |
 | NLB | `oci_nlb HealthyBackends < 1` feeds `core-alarm-nlb-health` |
-| Logs | `core-logs/core-log-cloud` (30 days). The unified agent `core-uac-cloud` tails Docker json logs, `/var/log/core/agent.log` (cc-rc@*/cc-agents output and unit events via cc-orchestrator's rsyslog rule) and `/var/log/core-bootstrap.log` |
+| Logs | `core-logs/core-log-cloud` (30 days). The unified agent `core-uac-cloud` tails Docker json logs, `/var/log/core/agent.log` (cc-rc@*/cc-agents output and unit events via claude-code-fleet's rsyslog rule) and `/var/log/core-bootstrap.log` |
 | Uptime | Uptime Kuma: the public status page at https://status.mazuryktech.com (`/status/core`). The admin `/dashboard` needs login. Kuma emails alerts through `core-email` (Email Delivery) |
 | Traces | `core-apm` (free tier). OTLP endpoint is `make output-foundation ARGS='-raw apm_data_upload_endpoint'`, auth key from `core-secret-apm-private-key` |
 | Alert fan-out | every alarm, the drift cron and `notify` in `/opt/core/lib.sh` publish to `core-topic-alerts`, which emails the alerts address |

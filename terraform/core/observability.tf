@@ -18,7 +18,7 @@ resource "oci_logging_log" "cloud" {
 resource "oci_logging_unified_agent_configuration" "cloud" {
   compartment_id = local.compartment
   display_name   = "core-uac-cloud"
-  description    = "Docker container logs, cc-rc@*/cc-agents unit events (cc-orchestrator), bootstrap log -> core-log-cloud"
+  description    = "Docker container logs, cc-rc@*/cc-agents unit events (claude-code-fleet), bootstrap log -> core-log-cloud"
   is_enabled     = true
   freeform_tags  = local.tags
 

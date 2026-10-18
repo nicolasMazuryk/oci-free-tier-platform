@@ -10,7 +10,7 @@ Web projects are served from a single reserved IP. If the origin accepts traffic
 ## Decision
 
 - DNS records (`@` and `*`) are proxied through Cloudflare, with SSL mode Full (strict) and a 15-year Cloudflare Origin CA certificate stored in Vault.
-- The NLB and app network security groups allow TCP 443 only from the Cloudflare IPv4 ranges. Terraform fetches the ranges from `cloudflare.com/ips-v4` at plan time and creates one rule per range. All ingress is expressed in NSGs; the shared security list only allows egress.
+- The NLB and cloud network security groups allow TCP 443 only from the Cloudflare IPv4 ranges. Terraform fetches the ranges from `cloudflare.com/ips-v4` at plan time and creates one rule per range. All ingress is expressed in NSGs; the shared security list only allows egress.
 - The NLB preserves the client source IP, so the NSG sees the real caller. Applications read the visitor from `CF-Connecting-IP`.
 - A weekly cron on the ops VM (`core-cf-ip-drift`) compares the published ranges with the NSG and sends an alert on topic `core-topic-alerts` when they differ. `make drift` runs the same check locally.
 

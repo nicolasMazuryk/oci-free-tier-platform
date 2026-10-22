@@ -9,4 +9,3 @@ output "dns_records" {
     dkim     = cloudflare_dns_record.dkim.name
   }
 }
-output "egress_host" { value = cloudflare_dns_record.egress.name }

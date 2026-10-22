@@ -199,8 +199,6 @@ remove_legacy_claude_code || log "WARN: legacy Claude Code cleanup failed"
 
 # ---- 6. edge (Caddy) with Cloudflare Origin cert -----------------------------
 open_port 443
-# Egress proxy (gost, claude-code-fleet): NLB listener core-lsn-egress -> :8443, TLS + basic auth (docs/adr/0006)
-open_port 8443
 install -m 0644 /opt/core/edge/compose.yaml /data/core/edge/compose.yaml
 sed -e "s/__DOMAIN__/${DOMAIN}/g" -e "s/__OPS_IP__/${OPS_IP}/g" /opt/core/edge/Caddyfile.tmpl > /data/core/edge/Caddyfile
 umask 077

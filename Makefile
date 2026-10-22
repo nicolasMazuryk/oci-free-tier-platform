@@ -81,8 +81,8 @@ secret-put: ## Create/update a Vault secret: NAME=core-secret-x [FILE=path] (pro
 free-tier: ## List resources and flag anything not Always-Free
 	scripts/check-free-tier.sh
 
-check-iam: ## Assert cloud cannot read the egress password and 8443 is the only 0.0.0.0/0 ingress (LIVE=1 also checks the applied policy)
-	scripts/check-iam-egress.sh $(if $(LIVE),--live)
+check-iam: ## Assert cloud cannot read the Cloudflare API token and no NSG rule allows 0.0.0.0/0 ingress (LIVE=1 also checks the applied policy)
+	scripts/check-iam.sh $(if $(LIVE),--live)
 
 drift: ## Compare Cloudflare IPv4 ranges with core-nsg-cloud rules
 	scripts/cf-ip-drift-local.sh

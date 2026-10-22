@@ -38,22 +38,6 @@ resource "oci_core_network_security_group_security_rule" "nlb_in_cf" {
   }
 }
 
-# The single 0.0.0.0/0 ingress exception: the egress proxy on :8443 (docs/adr/0006).
-resource "oci_core_network_security_group_security_rule" "nlb_in_egress" {
-  network_security_group_id = oci_core_network_security_group.nlb.id
-  direction                 = "INGRESS"
-  protocol                  = "6"
-  source_type               = "CIDR_BLOCK"
-  source                    = "0.0.0.0/0"
-  description               = "egress proxy (Browser Use, TLS + basic auth)"
-  tcp_options {
-    destination_port_range {
-      min = 8443
-      max = 8443
-    }
-  }
-}
-
 resource "oci_core_network_security_group_security_rule" "nlb_out_cloud" {
   network_security_group_id = oci_core_network_security_group.nlb.id
   direction                 = "EGRESS"
@@ -64,20 +48,6 @@ resource "oci_core_network_security_group_security_rule" "nlb_out_cloud" {
     destination_port_range {
       min = 443
       max = 443
-    }
-  }
-}
-
-resource "oci_core_network_security_group_security_rule" "nlb_out_cloud_egress" {
-  network_security_group_id = oci_core_network_security_group.nlb.id
-  direction                 = "EGRESS"
-  protocol                  = "6"
-  destination_type          = "NETWORK_SECURITY_GROUP"
-  destination               = oci_core_network_security_group.cloud.id
-  tcp_options {
-    destination_port_range {
-      min = 8443
-      max = 8443
     }
   }
 }
@@ -102,21 +72,6 @@ resource "oci_core_network_security_group_security_rule" "cloud_in_cf" {
     destination_port_range {
       min = 443
       max = 443
-    }
-  }
-}
-
-resource "oci_core_network_security_group_security_rule" "cloud_in_egress" {
-  network_security_group_id = oci_core_network_security_group.cloud.id
-  direction                 = "INGRESS"
-  protocol                  = "6"
-  source_type               = "CIDR_BLOCK"
-  source                    = "0.0.0.0/0"
-  description               = "egress proxy (NLB preserves the source IP)"
-  tcp_options {
-    destination_port_range {
-      min = 8443
-      max = 8443
     }
   }
 }

@@ -30,9 +30,10 @@ resource "oci_identity_policy" "compute" {
   freeform_tags  = local.tags
   statements = [
     # The egress proxy password is delivered to cloud by claude-code-fleet install (from the Mac), never read
-    # through the instance principal. `make check-iam` asserts this exclusion. browser-use-api-key stays
-    # readable: the cloud brain calls Browser Use (shield login, browser-use executor).
-    "Allow dynamic-group ${oci_identity_dynamic_group.compute.name} to read secret-family in compartment ${oci_identity_compartment.core.name} where target.secret.name != 'core-secret-egress-proxy-password'",
+    # through the instance principal. The Cloudflare API token is used only by the Mac's terraform/cloudflare and
+    # carries zone-wide DNS/SSL edit, so cloud never reads it either. `make check-iam` asserts both exclusions.
+    # browser-use-api-key stays readable: the cloud brain calls Browser Use (shield login, browser-use executor).
+    "Allow dynamic-group ${oci_identity_dynamic_group.compute.name} to read secret-family in compartment ${oci_identity_compartment.core.name} where all {target.secret.name != 'core-secret-egress-proxy-password', target.secret.name != 'core-secret-cf-api-token'}",
     "Allow dynamic-group ${oci_identity_dynamic_group.compute.name} to read secret-family in compartment ${oci_identity_compartment.projects.name}",
     "Allow dynamic-group ${oci_identity_dynamic_group.compute.name} to use metrics in compartment ${oci_identity_compartment.core.name}",
     "Allow dynamic-group ${oci_identity_dynamic_group.compute.name} to use ons-topics in compartment ${oci_identity_compartment.core.name}",

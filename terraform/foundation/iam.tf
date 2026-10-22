@@ -29,7 +29,10 @@ resource "oci_identity_policy" "compute" {
   description    = "Instance principal permissions for core VMs"
   freeform_tags  = local.tags
   statements = [
-    "Allow dynamic-group ${oci_identity_dynamic_group.compute.name} to read secret-family in compartment ${oci_identity_compartment.core.name}",
+    # The egress proxy password is delivered to cloud by claude-code-fleet install (from the Mac), never read
+    # through the instance principal. `make check-iam` asserts this exclusion. browser-use-api-key stays
+    # readable: the cloud brain calls Browser Use (shield login, browser-use executor).
+    "Allow dynamic-group ${oci_identity_dynamic_group.compute.name} to read secret-family in compartment ${oci_identity_compartment.core.name} where target.secret.name != 'core-secret-egress-proxy-password'",
     "Allow dynamic-group ${oci_identity_dynamic_group.compute.name} to read secret-family in compartment ${oci_identity_compartment.projects.name}",
     "Allow dynamic-group ${oci_identity_dynamic_group.compute.name} to use metrics in compartment ${oci_identity_compartment.core.name}",
     "Allow dynamic-group ${oci_identity_dynamic_group.compute.name} to use ons-topics in compartment ${oci_identity_compartment.core.name}",

@@ -48,6 +48,7 @@ make wipe                       # backup, then destroy core layer   (ASK THE HUM
 make restore BACKUP=<ocid>|none # recreate core; /data from backup
 make free-tier                  # inventory + Always-Free check (exit 1 on violation)
 make drift                      # Cloudflare IPv4 ranges vs core-nsg-cloud
+make check-iam [LIVE=1]         # egress guard rails: IAM exclusion + 8443 is the only 0.0.0.0/0 ingress
 make bootstrap                  # first-ever foundation deploy (local state, then migrate)
 ```
 
@@ -77,7 +78,9 @@ make bootstrap                  # first-ever foundation deploy (local state, the
    on the boot volume and break restored containers. Proven by the wipe/restore drill of 2026-10-13: see `docs/runbooks/wipe-and-restore.md`.
 6. **Origin is Cloudflare-only.**
    - `core-nsg-nlb` and `core-nsg-cloud` allow 443 only from https://www.cloudflare.com/ips-v4. The NLB uses preserve-source.
-   - Never add `0.0.0.0/0` ingress, and never give a VM a public IP.
+   - Never add `0.0.0.0/0` ingress, and never give a VM a public IP. **The one exception is TCP 8443** (egress proxy for
+     Browser Use, TLS + basic auth, ADR 0006). `make check-iam` fails on any other `0.0.0.0/0` ingress.
+   - `core-pol-compute` must keep excluding `core-secret-egress-proxy-password` from the instance principal.
    - Tailscale on cloud is outbound-only (no NSG change). The only host-firewall opening for it is mosh,
      UDP 60000–61000 on `tailscale0` (`allow_udp_on_iface`). Tailscale SSH needs no port. Bastion stays as break-glass.
 7. **Never expose a first-run or setup UI publicly.**
@@ -144,6 +147,8 @@ Use `make output-<layer>` for OCIDs. Don't hard-code new OCIDs into code.
 | `core-secret-uptime-kuma-admin` | foundation (random) | ops bootstrap (Kuma first-run setup); human login |
 | `core-secret-tailscale-authkey` | human (`secret-put`) | cloud bootstrap: `tailscale up --auth-key=file:…`. Holds a Tailscale **OAuth client secret** (`tskey-client-…`, scope *Auth Keys: Write*, tag `tag:cloud`; does not expire; see `secrets-rotation.md`). Only needed when the node has no state; skipped if absent |
 | `core-secret-ntfy-topic` | human (`secret-put`) | claude-code-fleet `install.sh` (push topic recovery on rebuild); not read by bootstrap |
+| `core-secret-egress-proxy-password` | human (`secret-put`) | gost basic auth on the egress proxy (NLB :8443). Delivered to cloud by claude-code-fleet `install.sh` from the Mac; **unreadable by the cloud dynamic group** (IAM exclusion, `make check-iam`) |
+| `core-secret-browser-use-api-key` | human (`secret-put`) | browser-router on cloud (Browser Use API); readable by cloud on purpose |
 
 Project secrets are `<slug>-secret-*`. `secret-put` puts them in compartment `projects`.
 

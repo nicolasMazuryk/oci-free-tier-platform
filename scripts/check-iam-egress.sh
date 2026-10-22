@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Assert the egress guard rails (offline, reads the Terraform source; add --live to also check the applied policy):
-#   1. no instance-principal statement can read core-secret-egress-proxy-password
+#   1. no instance-principal statement can read core-secret-egress-proxy-password or core-secret-cf-api-token
 #   2. 0.0.0.0/0 INGRESS appears only on TCP 8443 (NSGs)
 #   scripts/check-iam-egress.sh [--live]
 # browser-use-api-key is deliberately readable by cloud (the cloud brain calls Browser Use).
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
-SECRET=core-secret-egress-proxy-password
+SECRETS=(core-secret-egress-proxy-password core-secret-cf-api-token)
 fail=0
 ok()  { printf '  \033[32mOK\033[0m   %s\n' "$*"; }
 bad() { printf '  \033[31mFAIL\033[0m %s\n' "$*"; fail=1; }
@@ -20,8 +20,10 @@ check_statements() { # stdin: one policy statement per line
     n=$((n+1))
     # compartment "projects" holds no egress secret; only statements on core matter
     [[ $line =~ compartment[[:space:]]+.*projects ]] && continue
-    if [[ $line =~ target\.secret\.name[[:space:]]*!=[[:space:]]*\'$SECRET\' ]]; then ok "excludes $SECRET: ${line:0:90}..."
-    else bad "can read $SECRET: $line"; fi
+    for s in "${SECRETS[@]}"; do
+      if [[ $line =~ target\.secret\.name[[:space:]]*!=[[:space:]]*\'$s\' ]]; then ok "excludes $s: ${line:0:90}..."
+      else bad "can read $s: $line"; fi
+    done
   done
   (( n > 0 )) || bad "no dynamic-group secret statement found (parser out of date?)"
 }

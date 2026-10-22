@@ -20,18 +20,6 @@ resource "cloudflare_dns_record" "wildcard" {
   comment = "core-nlb wildcard (managed by terraform/cloudflare)"
 }
 
-# Egress gateway for Browser Use (ADR 0006). DNS only: Cloudflare cannot proxy a forward proxy on 8443.
-# The explicit record overrides the proxied wildcard.
-resource "cloudflare_dns_record" "egress" {
-  zone_id = var.zone_id
-  name    = "egress.${local.domain}"
-  type    = "A"
-  content = local.ip
-  proxied = false
-  ttl     = 300
-  comment = "egress gateway, DNS only (ADR 0006)"
-}
-
 # ---- OCI Email Delivery (DNS only) ----
 resource "cloudflare_dns_record" "spf" {
   zone_id = var.zone_id

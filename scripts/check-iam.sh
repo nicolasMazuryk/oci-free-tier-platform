@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Assert the egress guard rails (offline, reads the Terraform source; add --live to also check the applied policy):
-#   1. no instance-principal statement can read core-secret-egress-proxy-password or core-secret-cf-api-token
-#   2. 0.0.0.0/0 INGRESS appears only on TCP 8443 (NSGs)
-#   scripts/check-iam-egress.sh [--live]
+# Assert the guard rails (offline, reads the Terraform source; add --live to also check the applied policy):
+#   1. no instance-principal statement can read core-secret-cf-api-token
+#   2. no NSG rule allows 0.0.0.0/0 INGRESS
+#   scripts/check-iam.sh [--live]
 # browser-use-api-key is deliberately readable by cloud (the cloud brain calls Browser Use).
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
-SECRETS=(core-secret-egress-proxy-password core-secret-cf-api-token)
+SECRETS=(core-secret-cf-api-token)
 fail=0
 ok()  { printf '  \033[32mOK\033[0m   %s\n' "$*"; }
 bad() { printf '  \033[31mFAIL\033[0m %s\n' "$*"; fail=1; }
@@ -18,7 +18,7 @@ check_statements() { # stdin: one policy statement per line
     [[ $line =~ [Dd]ynamic-group ]] || continue
     [[ $line =~ (secret-family|secrets|secret-bundles|secret-versions|vaults) ]] || continue
     n=$((n+1))
-    # compartment "projects" holds no egress secret; only statements on core matter
+    # compartment "projects" holds no guarded secret; only statements on core matter
     [[ $line =~ compartment[[:space:]]+.*projects ]] && continue
     for s in "${SECRETS[@]}"; do
       if [[ $line =~ target\.secret\.name[[:space:]]*!=[[:space:]]*\'$s\' ]]; then ok "excludes $s: ${line:0:90}..."
@@ -40,22 +40,15 @@ if [[ ${1:-} == --live ]]; then
 fi
 
 echo "== NSG ingress from 0.0.0.0/0"
-files=("$root"/terraform/core/*.tf)
-# a rule block: direction INGRESS + source 0.0.0.0/0 must have min = max = 8443
-bad_rules="$(awk '
-  /resource "oci_core_network_security_group_security_rule"/ { inres=1; dir=""; src=""; min=""; max="" }
+open_rules="$(awk '
+  /resource "oci_core_network_security_group_security_rule"/ { inres=1; dir=""; src="" }
   inres && /direction/ { dir=$3 }
   inres && /source[[:space:]]*=/ && !/source_type/ { src=$3 }
-  inres && /min[[:space:]]*=/ { min=$3 }
-  inres && /max[[:space:]]*=/ { max=$3 }
   inres && /^}/ {
-    if (dir=="\"INGRESS\"" && src=="\"0.0.0.0/0\"") { n++; if (min!="8443" || max!="8443") print FILENAME": "$0 " (ports "min"-"max")" }
+    if (dir=="\"INGRESS\"" && src=="\"0.0.0.0/0\"") print FILENAME": rule ending at line "FNR
     inres=0
   }
-  END { if (n=="") n=0; print "COUNT " n > "/dev/stderr" }
-' "${files[@]}" 2>"${TMPDIR:-/tmp}/.nsgcount.$$")" || true
-count="$(sed -n 's/^COUNT //p' "${TMPDIR:-/tmp}/.nsgcount.$$")"; rm -f "${TMPDIR:-/tmp}/.nsgcount.$$"
-[[ -z $bad_rules ]] || bad "0.0.0.0/0 ingress on a port other than 8443: $bad_rules"
-(( ${count:-0} >= 1 )) && ok "0.0.0.0/0 ingress rules: ${count}, all TCP 8443 only" || bad "expected the 8443 exception rules, found ${count:-0}"
+' "$root"/terraform/core/*.tf)"
+[[ -z $open_rules ]] && ok "no 0.0.0.0/0 ingress rule" || bad "0.0.0.0/0 ingress: $open_rules"
 
 exit $fail

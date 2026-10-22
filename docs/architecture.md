@@ -34,13 +34,13 @@ NSGs:
 
 | NSG | Ingress |
 |---|---|
-| `core-nsg-nlb` (on the NLB) | TCP 443 from each Cloudflare IPv4 range (15 rules, fetched from cloudflare.com/ips-v4 at plan time); **TCP 8443 from `0.0.0.0/0`** (egress proxy, [ADR 0006](adr/0006-egress-proxy-public-8443.md)). Egress 443 and 8443 to `core-nsg-cloud`. |
-| `core-nsg-cloud` | TCP 443 from Cloudflare ranges (the NLB preserves the source IP); **TCP 8443 from `0.0.0.0/0`** (egress proxy); TCP 443 from `core-nsg-nlb` (health checks); TCP 443 from `core-nsg-ops` (Kuma origin probe); TCP 22 from the Bastion endpoint /32 |
+| `core-nsg-nlb` (on the NLB) | TCP 443 from each Cloudflare IPv4 range (15 rules, fetched from cloudflare.com/ips-v4 at plan time) (no `0.0.0.0/0` ingress, [ADR 0006](adr/0006-browser-use-isp-proxy.md)). Egress 443 to `core-nsg-cloud`. |
+| `core-nsg-cloud` | TCP 443 from Cloudflare ranges (the NLB preserves the source IP); TCP 443 from `core-nsg-nlb` (health checks); TCP 443 from `core-nsg-ops` (Kuma origin probe); TCP 22 from the Bastion endpoint /32 |
 | `core-nsg-ops` | TCP 3001 from `core-nsg-cloud` (Caddy proxies status.*); TCP 22 from the Bastion endpoint /32 |
 
 Exit node: bootstrap sets `net.ipv4.ip_forward` and `net.ipv6.conf.all.forwarding` (`/etc/sysctl.d/99-core-ipforward.conf`) and advertises `cloud` with `--advertise-exit-node`; tailscaled's own `ts-forward` chain permits the forwarding, so no FORWARD rule is added. The tailnet policy auto-approves the route (claude-code-fleet).
 
-Host firewall: Oracle's Ubuntu image ends `INPUT` with REJECT. Bootstrap inserts ACCEPT rules for 443 and 8443 (cloud) and 3001 (ops), both live and in `/etc/iptables/rules.v4`.
+Host firewall: Oracle's Ubuntu image ends `INPUT` with REJECT. Bootstrap inserts ACCEPT rules for 443 (cloud) and 3001 (ops), both live and in `/etc/iptables/rules.v4`.
 
 ### Request path (web)
 

@@ -115,6 +115,15 @@ UNIT
   systemctl enable --now core-disk-metric.timer
 }
 
+# Enable IPv4/IPv6 forwarding now and across reboots (Tailscale exit node). Idempotent.
+enable_ip_forward() {
+  local conf=/etc/sysctl.d/99-core-ipforward.conf want
+  want='net.ipv4.ip_forward = 1
+net.ipv6.conf.all.forwarding = 1'
+  [[ "$(cat "$conf" 2>/dev/null)" == "$want" ]] || printf '%s\n' "$want" > "$conf"
+  sysctl -q -p "$conf" >/dev/null
+}
+
 # Allow inbound UDP on one interface only (e.g. mosh over tailscale0), live and in
 # /etc/iptables/rules.v4. Inserted just before the image's final REJECT.
 #   allow_udp_on_iface tailscale0 60000:61000

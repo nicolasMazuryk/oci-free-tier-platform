@@ -115,6 +115,8 @@ fi
 # as break-glass. Tailscale is outbound-only: no public IP, no new ingress. Node state lives on /data, so a
 # restore from backup rejoins as the same node (same name and 100.x IP). Never fatal: a tailnet problem
 # must not stop the rest of the bootstrap.
+# `cloud` also advertises itself as an exit node (browser-router egress); a tailnet autoApprover admits it, and
+# tailscaled's own ts-forward chain handles FORWARD, so no extra iptables rule is needed.
 TS_HOSTNAME=cloud TS_TAGS=tag:cloud TS_STATE=/data/core/tailscale
 setup_tailscale() {
   local dropin=/etc/systemd/system/tailscaled.service.d/10-core-state.conf want changed=0 state="" kf rc codename
@@ -145,16 +147,16 @@ ExecStart=/usr/sbin/tailscaled --state=$TS_STATE/tailscaled.state --statedir=$TS
   done
   case "$state" in
     Running) # already joined: keep the settings converged, never re-auth
-      tailscale set --ssh --hostname="$TS_HOSTNAME" --accept-dns=false || return 1
+      tailscale set --ssh --hostname="$TS_HOSTNAME" --accept-dns=false --advertise-exit-node || return 1
       log "tailscale up as $(tailscale status --json | jq -r '.Self.DNSName')" ;;
     Stopped) # logged in, but `tailscale down` was run
-      tailscale up --ssh --hostname="$TS_HOSTNAME" --advertise-tags="$TS_TAGS" --accept-dns=false --timeout=60s || return 1
+      tailscale up --ssh --hostname="$TS_HOSTNAME" --advertise-tags="$TS_TAGS" --accept-dns=false --advertise-exit-node --timeout=60s || return 1
       log "tailscale brought back up" ;;
     *) # NeedsLogin / fresh node: join with the reusable, tag:cloud auth key from Vault (never on argv)
       kf="$(mktemp)"; chmod 600 "$kf"
       if secret_get core-secret-tailscale-authkey > "$kf"; then
         rc=0
-        tailscale up --ssh --hostname="$TS_HOSTNAME" --advertise-tags="$TS_TAGS" --accept-dns=false \
+        tailscale up --ssh --hostname="$TS_HOSTNAME" --advertise-tags="$TS_TAGS" --accept-dns=false --advertise-exit-node \
           --auth-key="file:$kf" --timeout=60s || rc=$?
         rm -f "$kf"
         (( rc == 0 )) || return 1
@@ -165,6 +167,7 @@ ExecStart=/usr/sbin/tailscaled --state=$TS_STATE/tailscaled.state --statedir=$TS
       fi ;;
   esac
 }
+enable_ip_forward || log "WARN: ip_forward sysctls failed (exit node will not forward)"
 setup_tailscale || log "WARN: Tailscale setup failed (Bastion still works; fix, then make host-sync VM=cloud)"
 # mosh over the tailnet only (UDP 60000-61000 on tailscale0), before the image's REJECT, persisted
 allow_udp_on_iface tailscale0 60000:61000
@@ -196,6 +199,8 @@ remove_legacy_claude_code || log "WARN: legacy Claude Code cleanup failed"
 
 # ---- 6. edge (Caddy) with Cloudflare Origin cert -----------------------------
 open_port 443
+# Egress proxy (gost, claude-code-fleet): NLB listener core-lsn-egress -> :8443, TLS + basic auth (docs/adr/0006)
+open_port 8443
 install -m 0644 /opt/core/edge/compose.yaml /data/core/edge/compose.yaml
 sed -e "s/__DOMAIN__/${DOMAIN}/g" -e "s/__OPS_IP__/${OPS_IP}/g" /opt/core/edge/Caddyfile.tmpl > /data/core/edge/Caddyfile
 umask 077

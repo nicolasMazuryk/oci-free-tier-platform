@@ -74,12 +74,15 @@ host-sync: ## rsync host/<VM>/ to /opt/core and re-run bootstrap.sh (VM=cloud|op
 	scripts/host-sync.sh $(or $(VM),cloud)
 
 ## ---- secrets / guardrails -----------------------------------------------
-.PHONY: secret-put free-tier drift
+.PHONY: secret-put free-tier drift check-iam
 secret-put: ## Create/update a Vault secret: NAME=core-secret-x [FILE=path] (prompts hidden if no FILE)
 	scripts/secret-put.sh $(NAME) $(FILE)
 
 free-tier: ## List resources and flag anything not Always-Free
 	scripts/check-free-tier.sh
+
+check-iam: ## Assert cloud cannot read the egress password and 8443 is the only 0.0.0.0/0 ingress (LIVE=1 also checks the applied policy)
+	scripts/check-iam-egress.sh $(if $(LIVE),--live)
 
 drift: ## Compare Cloudflare IPv4 ranges with core-nsg-cloud rules
 	scripts/cf-ip-drift-local.sh

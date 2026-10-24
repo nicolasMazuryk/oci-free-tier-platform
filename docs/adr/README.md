@@ -10,3 +10,4 @@ Format: [MADR](https://adr.github.io/madr/) (context, decision, consequences). E
 | [0004](0004-no-public-ips-bastion-tailscale.md) | No public IPs on VMs: Bastion for break-glass, Tailscale for daily access |
 | [0005](0005-single-data-volume-and-vault.md) | One `/data` volume plus Vault make wipe and restore possible |
 | [0006](0006-browser-use-isp-proxy.md) | Browser Use egresses through a Polish ISP proxy; no self-hosted gateway and no `0.0.0.0/0` ingress |
+| [0007](0007-static-egress-ip.md) | Static egress IP: reserved `core-pip-natgw` on `core-natgw`; `cloud` is the tailnet exit node |

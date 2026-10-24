@@ -22,7 +22,7 @@ The account is **Pay-As-You-Go**. Anything that is not Always-Free is billed, so
 
 | Layer | Dir | State key | Lifecycle | Holds |
 |---|---|---|---|---|
-| foundation | `terraform/foundation` | `foundation/terraform.tfstate` | **Persistent**. Never destroy. | compartments `core` and `projects`, `core-bucket-tfstate`, `core-vault` + `core-key-main`, reserved IP `core-pip-nlb`, `core-dg-compute` / `core-pol-compute` / `core-pol-objectstorage`, `core-topic-alerts` + email sub, `core-budget-monthly`, Email Delivery (domain, `core-dkim`, `noreply@`, SMTP cred, which goes to `core-secret-smtp`), `core-apm` (keys go to `core-secret-apm-*-key`), `core-secret-uptime-kuma-admin` |
+| foundation | `terraform/foundation` | `foundation/terraform.tfstate` | **Persistent**. Never destroy. | compartments `core` and `projects`, `core-bucket-tfstate`, `core-vault` + `core-key-main`, reserved IPs `core-pip-nlb` (ingress) and `core-pip-natgw` (egress, on `core-natgw`), `core-dg-compute` / `core-pol-compute` / `core-pol-objectstorage`, `core-topic-alerts` + email sub, `core-budget-monthly`, Email Delivery (domain, `core-dkim`, `noreply@`, SMTP cred, which goes to `core-secret-smtp`), `core-apm` (keys go to `core-secret-apm-*-key`), `core-secret-uptime-kuma-admin` |
 | cloudflare | `terraform/cloudflare` | `cloudflare/terraform.tfstate` | Persistent, idempotent | DNS (apex + `*` A records to the reserved IP, proxied; SPF/DKIM/DMARC DNS-only), zone TLS settings, Origin CA cert (written to `core-secret-cf-origin-cert` and `-key`) |
 | core | `terraform/core` | `core/terraform.tfstate` | **Wipeable** (`make wipe` / `make restore`) | VCN/subnets/gateways/route tables, NSGs, `core-nlb`, `core-bastion`, both VMs, `core-bv-cloud-data`, `core-bkp-daily-3d`, logs, alarms |
 
@@ -63,7 +63,7 @@ make bootstrap                  # first-ever foundation deploy (local state, the
 ## Invariants: do not break these
 
 1. **Never** `terraform destroy` foundation or cloudflare. Never destroy core without the human's explicit OK.
-   `prevent_destroy` is set on the bucket, vault, key and reserved IP.
+   `prevent_destroy` is set on the bucket, vault, key and both reserved IPs.
 2. **Secrets live only in Vault**, plus the private state bucket.
    - Never put a secret value on argv, in chat, in logs or in git.
    - Use `scripts/secret-put.sh`, which reads a hidden prompt or a file and sends the value via a 0600 temp JSON file.
@@ -124,6 +124,7 @@ On the VM:
 | Thing | Value |
 |---|---|
 | Reserved public IP (DNS target) | `203.0.113.10` (`core-pip-nlb`) |
+| Reserved egress IP (allowlists) | `193.123.182.227` (`core-pip-natgw` on `core-natgw`). Both VMs egress from it, and `cloud` is the tailnet exit node (ADR 0007). Replacing `core-natgw` needs the `0.0.0.0/0` rule removed from `core-rt-priv` first (1 NAT GW per region) |
 | core-vm-cloud | A1.Flex 2 OCPU / 12 GB, AD-1, `10.0.2.10`, boot 50 GB + `core-bv-cloud-data` 100 GB at `/data`; OS hostname `cloud` |
 | core-vm-ops | E2.1.Micro, AD-1 (the only AD that has it), `10.0.2.20`, boot 50 GB |
 | Bastion | `core-bastion`, private endpoint `10.0.2.6` (assigned by OCI, changes on a core rebuild: `make output-core ARGS='-raw bastion_private_ip'`) |

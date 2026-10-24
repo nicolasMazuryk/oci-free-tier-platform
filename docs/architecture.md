@@ -15,7 +15,7 @@ terraform/foundation  (persistent)  ->  terraform/cloudflare (persistent)  ->  t
 
 | Layer | Why separate |
 |---|---|
-| foundation | Holds things that must survive a wipe: the state bucket itself, Vault + key + secrets, the reserved public IP that DNS points at, IAM, alerting topic, budget, Email Delivery, APM. `prevent_destroy` is set on bucket/vault/key/IP. Bootstrapped with local state, then migrated into the bucket it creates (`make bootstrap`). |
+| foundation | Holds things that must survive a wipe: the state bucket itself, Vault + key + secrets, the reserved public IPs (`core-pip-nlb`, which DNS points at, and `core-pip-natgw`, the egress IP), IAM, alerting topic, budget, Email Delivery, APM. `prevent_destroy` is set on bucket/vault/key/IP. Bootstrapped with local state, then migrated into the bucket it creates (`make bootstrap`). |
 | cloudflare | DNS + TLS. It depends only on the reserved IP, so the NLB can be destroyed and recreated freely. The provider token comes from Vault. |
 | core | Everything that costs nothing to recreate: VCN, NSGs, NLB, Bastion, VMs, data volume, backup policy, logs, alarms. |
 
@@ -38,7 +38,7 @@ NSGs:
 | `core-nsg-cloud` | TCP 443 from Cloudflare ranges (the NLB preserves the source IP); TCP 443 from `core-nsg-nlb` (health checks); TCP 443 from `core-nsg-ops` (Kuma origin probe); TCP 22 from the Bastion endpoint /32 |
 | `core-nsg-ops` | TCP 3001 from `core-nsg-cloud` (Caddy proxies status.*); TCP 22 from the Bastion endpoint /32 |
 
-Exit node: bootstrap sets `net.ipv4.ip_forward` and `net.ipv6.conf.all.forwarding` (`/etc/sysctl.d/99-core-ipforward.conf`) and advertises `cloud` with `--advertise-exit-node`; tailscaled's own `ts-forward` chain permits the forwarding, so no FORWARD rule is added. The tailnet policy auto-approves the route (claude-code-fleet).
+Exit node: bootstrap sets `net.ipv4.ip_forward` and `net.ipv6.conf.all.forwarding` (`/etc/sysctl.d/99-core-ipforward.conf`) and advertises `cloud` with `--advertise-exit-node`; tailscaled's own `ts-forward` chain permits the forwarding, so no FORWARD rule is added. The tailnet policy auto-approves the route (claude-code-fleet). `cloud` is the exit node for personal devices (Mac, iPhone) and browser-router. Its traffic leaves through `core-natgw`, whose public IP is the reserved `core-pip-natgw` (193.123.182.227, foundation layer), so the egress IP stays allowlistable across wipe/restore ([ADR 0007](adr/0007-static-egress-ip.md)). Tailnet peers reach `cloud` through DERP, because the NAT gateway is hard NAT and the VM has no public IP.
 
 Host firewall: Oracle's Ubuntu image ends `INPUT` with REJECT. Bootstrap inserts ACCEPT rules for 443 (cloud) and 3001 (ops), both live and in `/etc/iptables/rules.v4`.
 

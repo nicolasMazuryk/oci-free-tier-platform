@@ -6,6 +6,7 @@ output "nsg_ops_id" { value = oci_core_network_security_group.ops.id }
 output "nsg_nlb_id" { value = oci_core_network_security_group.nlb.id }
 output "nlb_id" { value = oci_network_load_balancer_network_load_balancer.core.id }
 output "nlb_public_ip" { value = local.f.nlb_public_ip }
+output "natgw_public_ip" { value = local.f.natgw_public_ip }
 output "bastion_id" { value = oci_bastion_bastion.core.id }
 output "bastion_private_ip" { value = oci_bastion_bastion.core.private_endpoint_ip_address }
 output "cloudflare_ipv4" { value = local.cf_ipv4 }

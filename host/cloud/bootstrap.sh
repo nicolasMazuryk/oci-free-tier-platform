@@ -116,9 +116,8 @@ fi
 # restore from backup rejoins as the same node (same name and 100.x IP). Never fatal: a tailnet problem
 # must not stop the rest of the bootstrap.
 # `cloud` also advertises itself as an exit node (browser-router egress); a tailnet autoApprover admits it, and
-# tailscaled's own ts-forward chain handles FORWARD, so no extra iptables rule is needed. It is also the tailnet
-# app connector (--advertise-connector): the domains in claude-code-fleet's policy.hujson leave through it, i.e. from
-# core-pip-natgw, for devices that keep their own exit-node role (ADR 0007).
+# tailscaled's own ts-forward chain handles FORWARD, so no extra iptables rule is needed. `cloud` never uses an
+# exit node itself (ADR 0007).
 TS_HOSTNAME=cloud TS_TAGS=tag:cloud TS_STATE=/data/core/tailscale
 setup_tailscale() {
   local dropin=/etc/systemd/system/tailscaled.service.d/10-core-state.conf want changed=0 state="" kf rc codename
@@ -149,16 +148,16 @@ ExecStart=/usr/sbin/tailscaled --state=$TS_STATE/tailscaled.state --statedir=$TS
   done
   case "$state" in
     Running) # already joined: keep the settings converged, never re-auth
-      tailscale set --ssh --hostname="$TS_HOSTNAME" --accept-dns=false --advertise-exit-node --advertise-connector || return 1
+      tailscale set --ssh --hostname="$TS_HOSTNAME" --accept-dns=false --advertise-exit-node || return 1
       log "tailscale up as $(tailscale status --json | jq -r '.Self.DNSName')" ;;
     Stopped) # logged in, but `tailscale down` was run
-      tailscale up --ssh --hostname="$TS_HOSTNAME" --advertise-tags="$TS_TAGS" --accept-dns=false --advertise-exit-node --advertise-connector --timeout=60s || return 1
+      tailscale up --ssh --hostname="$TS_HOSTNAME" --advertise-tags="$TS_TAGS" --accept-dns=false --advertise-exit-node --timeout=60s || return 1
       log "tailscale brought back up" ;;
     *) # NeedsLogin / fresh node: join with the reusable, tag:cloud auth key from Vault (never on argv)
       kf="$(mktemp)"; chmod 600 "$kf"
       if secret_get core-secret-tailscale-authkey > "$kf"; then
         rc=0
-        tailscale up --ssh --hostname="$TS_HOSTNAME" --advertise-tags="$TS_TAGS" --accept-dns=false --advertise-exit-node --advertise-connector \
+        tailscale up --ssh --hostname="$TS_HOSTNAME" --advertise-tags="$TS_TAGS" --accept-dns=false --advertise-exit-node \
           --auth-key="file:$kf" --timeout=60s || rc=$?
         rm -f "$kf"
         (( rc == 0 )) || return 1

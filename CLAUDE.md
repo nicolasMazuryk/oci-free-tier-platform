@@ -124,7 +124,7 @@ On the VM:
 | Thing | Value |
 |---|---|
 | Reserved public IP (DNS target) | `203.0.113.10` (`core-pip-nlb`) |
-| Reserved egress IP (allowlists) | `193.123.182.227` (`core-pip-natgw` on `core-natgw`). Both VMs egress from it, and `cloud` is the tailnet exit node (ADR 0007). Replacing `core-natgw` needs the `0.0.0.0/0` rule removed from `core-rt-priv` first (1 NAT GW per region) |
+| Reserved egress IP (allowlists) | `193.123.182.227` (`core-pip-natgw` on `core-natgw`). Both VMs egress from it, and picking exit node `cloud` gives a tailnet device this IP (ADR 0007). Replacing `core-natgw` needs the `0.0.0.0/0` rule removed from `core-rt-priv` first (1 NAT GW per region) |
 | core-vm-cloud | A1.Flex 2 OCPU / 12 GB, AD-1, `10.0.2.10`, boot 50 GB + `core-bv-cloud-data` 100 GB at `/data`; OS hostname `cloud` |
 | core-vm-ops | E2.1.Micro, AD-1 (the only AD that has it), `10.0.2.20`, boot 50 GB |
 | Bastion | `core-bastion`, private endpoint `10.0.2.6` (assigned by OCI, changes on a core rebuild: `make output-core ARGS='-raw bastion_private_ip'`) |

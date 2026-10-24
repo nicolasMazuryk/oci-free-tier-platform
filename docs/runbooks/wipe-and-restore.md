@@ -2,7 +2,7 @@
 
 The core layer (network, NLB, Bastion, VMs, volume, alarms, logs) can be destroyed and rebuilt.
 
-**These stay untouched:** foundation (Vault, state, reserved IP 203.0.113.10, email, budget) and cloudflare (DNS, Origin cert). So DNS never changes.
+**These stay untouched:** foundation (Vault, state, reserved IPs 203.0.113.10 for ingress and 193.123.182.227 for egress, email, budget) and cloudflare (DNS, Origin cert). So DNS and the allowlisted egress IP never change.
 
 > Agents: **never run `make wipe` without the human's explicit go-ahead.**
 
@@ -23,7 +23,7 @@ make wipe            # asks you to type 'wipe'; in scripts: CONFIRM=wipe make wi
      `oci bv backup list --compartment-id <core>`, then `oci bv backup delete --volume-backup-id ...`.
    - For consistency, stop heavy writers first. For example, stop the Claude Code units with `sudo systemctl stop 'cc-rc@*' cc-agents`, and run `docker compose stop` for databases.
 2. The backup OCID is saved to `.last-wipe-backup` (gitignored). Keep a note of it anyway.
-3. `terraform destroy` runs on `terraform/core`. The reserved IP detaches from the NLB and stays.
+3. `terraform destroy` runs on `terraform/core`. The reserved IPs detach from the NLB and the NAT gateway and stay.
 
 Use `SKIP_BACKUP=1` only if you already have a fresh backup.
 

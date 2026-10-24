@@ -14,7 +14,8 @@ This tenancy is **Pay-As-You-Go**. Anything beyond Always-Free is billed immedia
 | Volume performance | Balanced (10 VPU/GB) | 10 | n/a (higher VPU is billed) |
 | Volume backups | 5 (boot + block) | policy keeps 3 | 2 for manual backups |
 | NLB / flexible LB | 1 / 1 (10 Mbps) | 1 / 0 | 1 LB |
-| Reserved public IPs | free | 1 (+ the NAT gateway's IP) | n/a |
+| Reserved public IPs | free | 2 (`core-pip-nlb`, `core-pip-natgw`) | n/a |
+| NAT gateways | 1 per region (`nat-gateway-count`) | 1 | 0 |
 | Vault | DEFAULT vault, SOFTWARE keys, 150 secrets | 1 / 1 key / ~9 secrets | many |
 | Object Storage | 20 GB | tfstate (KB) | n/a |
 | Logging | 10 GB/month | small | n/a |

@@ -18,6 +18,7 @@ resource "oci_core_nat_gateway" "natgw" {
   compartment_id = local.compartment
   vcn_id         = oci_core_vcn.core.id
   display_name   = "core-natgw"
+  public_ip_id   = local.f.natgw_public_ip_id
   freeform_tags  = local.tags
 }
 

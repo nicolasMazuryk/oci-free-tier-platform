@@ -147,8 +147,9 @@ ExecStart=/usr/sbin/tailscaled --state=$TS_STATE/tailscaled.state --statedir=$TS
     [[ -n $state && $state != NoState ]] && break; sleep 1
   done
   case "$state" in
-    Running) # already joined: keep the settings converged, never re-auth
-      tailscale set --ssh --hostname="$TS_HOSTNAME" --accept-dns=false --advertise-exit-node || return 1
+    Running) # already joined: keep the settings converged, never re-auth. `set` keeps flags it is not given, so
+      # --advertise-routes= drops any route other than the exit node's (e.g. /32s left by a former app connector).
+      tailscale set --ssh --hostname="$TS_HOSTNAME" --accept-dns=false --advertise-routes= --advertise-exit-node || return 1
       log "tailscale up as $(tailscale status --json | jq -r '.Self.DNSName')" ;;
     Stopped) # logged in, but `tailscale down` was run
       tailscale up --ssh --hostname="$TS_HOSTNAME" --advertise-tags="$TS_TAGS" --accept-dns=false --advertise-exit-node --timeout=60s || return 1

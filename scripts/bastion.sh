@@ -42,7 +42,22 @@ session_for() {
     --wait-for-state SUCCEEDED --wait-for-state FAILED --max-wait-seconds 300 2>/dev/null \
     --query 'data.resources[0].identifier' --raw-output)"
   [[ $sid == ocid1.bastionsession* ]] || die "session creation failed: $sid"
+  session_wait_ready "$sid" "$ip"
   echo "$sid" > "$cache"; echo "$sid"
+}
+
+# session_wait_ready <sid> <ip>: a new session reports ACTIVE before the Bastion host accepts its key, so the first
+# connection fails with "Permission denied (publickey)". Retry a no-op ssh through it for up to ~30 s.
+session_wait_ready() {
+  local sid="$1" ip="$2" i
+  for i in 1 2 3 4 5 6; do
+    ssh -i "$SSH_KEY" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+      -o "UserKnownHostsFile=$KNOWN_HOSTS" -o LogLevel=ERROR -o ConnectTimeout=10 \
+      -o "ProxyCommand=ssh -i $SSH_KEY -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=$KNOWN_HOSTS -o LogLevel=ERROR -W %h:%p -p 22 $sid@host.bastion.$REGION.oci.oraclecloud.com" \
+      "ubuntu@$ip" true </dev/null >/dev/null 2>&1 && return 0
+    (( i < 6 )) && { log "Bastion session not accepting the key yet: retry $i/5 in 5 s"; sleep 5; }
+  done
+  log "Bastion session still refuses the key after ~30 s: continuing (the next command may fail)"
 }
 
 # ssh_opts <vm> -> fills SSH_OPTS array and TARGET

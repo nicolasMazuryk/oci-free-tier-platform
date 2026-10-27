@@ -1,7 +1,7 @@
 # Agent fleet: repos and sessions → claude-code-fleet
 
 **Claude Code on `core-vm-cloud` is owned by [claude-code-fleet](https://github.com/nicolasMazuryk/claude-code-fleet)**
-(`~/Documents/claude-code-fleet`, ADR 0002). This repo no longer installs Claude Code, `agent@<repo>` or `fleet`.
+(`~/code/claude-code-fleet`, ADR 0002). This repo no longer installs Claude Code, `agent@<repo>` or `fleet`.
 
 | What | Where (claude-code-fleet) |
 |---|---|

@@ -174,6 +174,94 @@ setup_tailscale || log "WARN: Tailscale setup failed (Bastion still works; fix, 
 # mosh over the tailnet only (UDP 60000-61000 on tailscale0), before the image's REJECT, persisted
 allow_udp_on_iface tailscale0 60000:61000
 
+# ---- 4c. reverse-tunnel endpoint: OpenSSH on tailscale0:2222, user `rtunnel` ------------
+# The Mac opens `ssh -N -R 127.0.0.1:22023:localhost:22` to this endpoint (phone-control-router), so cloud agents
+# reach the Mac's sshd. A Tailscale SSH session keeps a dead client's -R listener after the Mac sleeps; this sshd
+# probes the client (ClientAlive 15 s x 3) and frees the listener within ~45 s. Scope: tailnet only (TCP 2222 on
+# tailscale0; the VM has no public IP), user `rtunnel` (no shell, no password), public key only, one remote
+# forward to TUNNEL_LISTEN and nothing else. Keys: Vault `core-secret-tunnel-authorized-keys` (one public key per
+# line; restrictions are added here). Without the secret the unit stays stopped.
+TUNNEL_USER=rtunnel TUNNEL_PORT=2222 TUNNEL_LISTEN=127.0.0.1:22023
+setup_tunnel_sshd() {
+  local cfg=/etc/ssh/sshd_config_tunnel keys=/etc/ssh/tunnel_authorized_keys unit=/etc/systemd/system/core-sshd-tunnel.service
+  local want tmp changed=0
+  id "$TUNNEL_USER" >/dev/null 2>&1 \
+    || useradd --system --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin "$TUNNEL_USER" || return 1
+  usermod -p '*' "$TUNNEL_USER" || return 1   # no password; not '!' (sshd without PAM refuses '!'-locked accounts)
+  want="# Managed by oci-free-tier-platform host/cloud/bootstrap.sh (4c). Do not edit.
+Port $TUNNEL_PORT
+ListenAddress 0.0.0.0
+HostKey /etc/ssh/ssh_host_ed25519_key
+PidFile /run/sshd-tunnel.pid
+AllowUsers $TUNNEL_USER
+AuthorizedKeysFile $keys
+AuthenticationMethods publickey
+PubkeyAuthentication yes
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitRootLogin no
+UsePAM no
+AllowTcpForwarding remote
+PermitListen $TUNNEL_LISTEN
+PermitOpen none
+GatewayPorts no
+AllowStreamLocalForwarding no
+AllowAgentForwarding no
+X11Forwarding no
+PermitTunnel no
+PermitTTY no
+PermitUserRC no
+PermitUserEnvironment no
+ForceCommand /usr/sbin/nologin
+ClientAliveInterval 15
+ClientAliveCountMax 3
+MaxSessions 1
+MaxAuthTries 2
+LoginGraceTime 20
+LogLevel VERBOSE"
+  if [[ "$(cat "$cfg" 2>/dev/null)" != "$want" ]]; then printf '%s\n' "$want" > "$cfg"; chmod 644 "$cfg"; changed=1; fi
+  tmp="$(mktemp)"
+  if secret_get core-secret-tunnel-authorized-keys > "$tmp.raw"; then
+    # only well-formed public keys, each pinned to the one forward
+    grep -E '^(ssh-ed25519|ecdsa-sha2-nistp[0-9]+|ssh-rsa) [A-Za-z0-9+/=]+( .*)?$' "$tmp.raw" \
+      | sed "s|^|restrict,port-forwarding,permitlisten=\"$TUNNEL_LISTEN\" |" > "$tmp"
+  elif [[ -f $keys ]]; then cp "$keys" "$tmp"
+  fi
+  rm -f "$tmp.raw"
+  if [[ -s $tmp ]] && ! cmp -s "$tmp" "$keys"; then install -m 644 -o root -g root "$tmp" "$keys"; changed=1; fi
+  rm -f "$tmp"
+  want="[Unit]
+Description=OpenSSH reverse-tunnel endpoint (tailscale0:$TUNNEL_PORT, user $TUNNEL_USER)
+After=network-online.target tailscaled.service
+Wants=network-online.target
+
+[Service]
+ExecStartPre=/usr/sbin/sshd -t -f $cfg
+ExecStart=/usr/sbin/sshd -D -e -f $cfg
+ExecReload=/bin/kill -HUP \$MAINPID
+Restart=on-failure
+RestartSec=5
+RuntimeDirectory=sshd
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=yes
+
+[Install]
+WantedBy=multi-user.target"
+  if [[ "$(cat "$unit" 2>/dev/null)" != "$want" ]]; then printf '%s\n' "$want" > "$unit"; systemctl daemon-reload; changed=1; fi
+  allow_tcp_on_iface tailscale0 "$TUNNEL_PORT"
+  if [[ ! -s $keys ]]; then
+    log "core-secret-tunnel-authorized-keys not in Vault yet: core-sshd-tunnel stays stopped"
+    systemctl disable --quiet --now core-sshd-tunnel 2>/dev/null || true; return 0
+  fi
+  /usr/sbin/sshd -t -f "$cfg" || return 1
+  systemctl enable --quiet core-sshd-tunnel || return 1
+  # a restart drops live tunnels; only on a change (a HUP would keep them, but the unit may not be running yet)
+  if (( changed )) || ! systemctl is-active --quiet core-sshd-tunnel; then
+    systemctl restart core-sshd-tunnel || return 1; log "core-sshd-tunnel (re)started"
+  fi
+}
+setup_tunnel_sshd || log "WARN: reverse-tunnel sshd setup failed (the Mac's tunnel cannot connect; fix, then make host-sync VM=cloud)"
+
 # ---- 5. Claude Code: owned by claude-code-fleet ---------------------------------
 # claude-code-fleet (github.com/nicolasMazuryk/claude-code-fleet, ADR 0002) installs the Claude Code binary, settings,
 # Agent View (cc-agents.service) and the Remote Control units (cc-rc@<repo>.service) with `./install.sh cloud`.

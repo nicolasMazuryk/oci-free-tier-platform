@@ -147,6 +147,7 @@ Use `make output-<layer>` for OCIDs. Don't hard-code new OCIDs into code.
 | `core-secret-apm-public-key` / `-private-key` | foundation | OTLP to `core-apm` |
 | `core-secret-uptime-kuma-admin` | foundation (random) | ops bootstrap (Kuma first-run setup); human login |
 | `core-secret-tailscale-authkey` | human (`secret-put`) | cloud bootstrap: `tailscale up --auth-key=file:…`. Holds a Tailscale **OAuth client secret** (`tskey-client-…`, scope *Auth Keys: Write*, tag `tag:cloud`; does not expire; see `secrets-rotation.md`). Only needed when the node has no state; skipped if absent |
+| `core-secret-tunnel-authorized-keys` | human (`secret-put`, a `.pub` file) | cloud bootstrap: `/etc/ssh/tunnel_authorized_keys` for `core-sshd-tunnel` (user `rtunnel`, `tailscale0:2222`, ADR 0008). One public key per line; unit stays disabled if absent |
 | `core-secret-ntfy-topic` | human (`secret-put`) | claude-code-fleet `install.sh` (push topic recovery on rebuild); not read by bootstrap |
 | `core-secret-browser-use-api-key` | human (`secret-put`) | browser-router on cloud (Browser Use API); readable by cloud on purpose |
 

@@ -124,12 +124,14 @@ net.ipv6.conf.all.forwarding = 1'
   sysctl -q -p "$conf" >/dev/null
 }
 
-# Allow inbound UDP on one interface only (e.g. mosh over tailscale0), live and in
+# Allow inbound UDP/TCP on one interface only (e.g. mosh over tailscale0), live and in
 # /etc/iptables/rules.v4. Inserted just before the image's final REJECT.
-#   allow_udp_on_iface tailscale0 60000:61000
-allow_udp_on_iface() {
-  local ifc="$1" ports="$2" rules=/etc/iptables/rules.v4 pos
-  local spec="-i $ifc -p udp -m udp --dport $ports -j ACCEPT"
+#   allow_udp_on_iface tailscale0 60000:61000 · allow_tcp_on_iface tailscale0 2222
+allow_udp_on_iface() { allow_on_iface "$1" udp "$2"; }
+allow_tcp_on_iface() { allow_on_iface "$1" tcp "$2"; }
+allow_on_iface() {
+  local ifc="$1" proto="$2" ports="$3" rules=/etc/iptables/rules.v4 pos
+  local spec="-i $ifc -p $proto -m $proto --dport $ports -j ACCEPT"
   # shellcheck disable=SC2086  # $spec is a fixed list of iptables words
   if ! iptables -C INPUT $spec 2>/dev/null; then
     pos="$(iptables -L INPUT -n --line-numbers | awk '$2 == "REJECT" { print $1; exit }')"

@@ -17,6 +17,31 @@ mosh agent@cloud          # mosh over the tailnet (UDP 60000-61000 on tailscale0
 - On the VM: `tailscale status`, `sudo iptables -S INPUT | grep 60000`, `systemctl status tailscaled`.
 - Claude Code on this VM (Agent View, Remote Control servers, settings) is documented in claude-code-fleet.
 
+## Reverse tunnel (Mac → cloud, `core-sshd-tunnel`)
+
+A dedicated OpenSSH sshd on `tailscale0:2222` carries the Mac's reverse tunnel (ADR 0008). User `rtunnel` may only open
+the remote forward `127.0.0.1:22023`; no shell, no other forwards. A dead client is dropped after about 45–60 s, which
+frees the listener.
+
+Mac `~/.ssh/config`:
+
+```
+Host cloud-tunnel
+  HostName cloud
+  User rtunnel
+  Port 2222
+  IdentityFile ~/.ssh/id_ed25519_cloud_tunnel
+  IdentitiesOnly yes
+  ServerAliveInterval 15
+  ServerAliveCountMax 3
+```
+
+- Keys: Vault `core-secret-tunnel-authorized-keys`, one public key per line
+  (`make secret-put NAME=core-secret-tunnel-authorized-keys FILE=$HOME/.ssh/id_ed25519_cloud_tunnel.pub`, then
+  `make host-sync VM=cloud`).
+- Host key: `cloud`'s `/etc/ssh/ssh_host_ed25519_key.pub` (not the Tailscale SSH host key on port 22).
+- On the VM: `systemctl status core-sshd-tunnel`, `journalctl -u core-sshd-tunnel`, `ss -ltnp | grep -E ':2222|:22023'`.
+
 ## Bastion (break-glass)
 
 - Both VMs are in `core-snet-priv` and have no public IP.

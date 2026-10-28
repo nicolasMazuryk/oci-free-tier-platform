@@ -130,6 +130,7 @@ Instance options:
 7. Logs in to gh from `core-secret-github-pat`, if that secret exists.
 8. Installs Tailscale (state on `/data/core/tailscale`), joins as `cloud` / `tag:cloud` from `core-secret-tailscale-authkey`
    (only when the node has no state yet), and allows mosh on `tailscale0`.
+   It then runs `core-sshd-tunnel`, the reverse-tunnel sshd on `tailscale0:2222` (user `rtunnel`, one remote forward to `127.0.0.1:22023`, ClientAlive 15 s × 3, keys from `core-secret-tunnel-authorized-keys`; ADR 0008).
 9. Removes the legacy Claude Code setup older bootstraps installed (`agent@*` units, `agent@.service`, `fleet`, their tmux servers and rsyslog rule). Idempotent; never touches claude-code-fleet's `cc-*` units.
 10. Installs the Origin cert from Vault, renders the Caddyfile, and brings up `core-edge`.
 11. Creates `/var/log/core/agent.log` (written by claude-code-fleet's rsyslog rule), logrotate, and the disk-metric timer.

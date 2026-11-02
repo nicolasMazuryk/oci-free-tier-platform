@@ -1,6 +1,6 @@
 # 0008. Reverse-tunnel endpoint: a dedicated OpenSSH sshd on tailscale0:2222
 
-- Status: accepted
+- Status: superseded by [ADR 0009](0009-retire-reverse-tunnel-endpoint.md)
 - Date: 2026-10-28
 
 ## Context

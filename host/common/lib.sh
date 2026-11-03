@@ -126,7 +126,7 @@ net.ipv6.conf.all.forwarding = 1'
 
 # Allow inbound UDP/TCP on one interface only (e.g. mosh over tailscale0), live and in
 # /etc/iptables/rules.v4. Inserted just before the image's final REJECT.
-#   allow_udp_on_iface tailscale0 60000:61000 · allow_tcp_on_iface tailscale0 2222
+#   allow_udp_on_iface tailscale0 60000:61000 · allow_tcp_on_iface tailscale0 8080
 allow_udp_on_iface() { allow_on_iface "$1" udp "$2"; }
 allow_tcp_on_iface() { allow_on_iface "$1" tcp "$2"; }
 allow_on_iface() {
@@ -140,5 +140,22 @@ allow_on_iface() {
   fi
   if [[ -f $rules ]] && ! grep -qxF -- "-A INPUT $spec" "$rules"; then
     sed -i "/^-A INPUT -j REJECT/i -A INPUT $spec" "$rules"
+  fi
+}
+
+# Remove a rule allow_on_iface added, live and from /etc/iptables/rules.v4. Idempotent.
+#   revoke_tcp_on_iface tailscale0 2222
+revoke_tcp_on_iface() { revoke_on_iface "$1" tcp "$2"; }
+revoke_on_iface() {
+  local ifc="$1" proto="$2" ports="$3" rules=/etc/iptables/rules.v4
+  local spec="-i $ifc -p $proto -m $proto --dport $ports -j ACCEPT"
+  # shellcheck disable=SC2086  # $spec is a fixed list of iptables words
+  while iptables -C INPUT $spec 2>/dev/null; do
+    # shellcheck disable=SC2086
+    iptables -D INPUT $spec || return 1
+    log "removed iptables INPUT accept $proto $ports on $ifc"
+  done
+  if [[ -f $rules ]] && grep -qxF -- "-A INPUT $spec" "$rules"; then
+    sed -i "\|^-A INPUT $spec\$|d" "$rules"
   fi
 }
